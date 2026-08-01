@@ -9,7 +9,7 @@ plugins {
 // setup) with storeFile/storePassword/keyAlias/keyPassword. Without it, the release build type
 // falls back to unsigned, same as before this key existed.
 val keystoreProperties = Properties()
-val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystorePropertiesFile = project.file("keystore.properties")
 val hasKeystore = keystorePropertiesFile.exists()
 if (hasKeystore) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
@@ -75,6 +75,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core"))
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.13")
 }
