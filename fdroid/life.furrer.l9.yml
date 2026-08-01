@@ -4,8 +4,11 @@
 # separate repo; keep it in sync by hand when the real submission changes.
 #
 # Verified against fdroidserver's own `fdroid lint`/`fdroid rewritemeta` before submitting -
-# passes cleanly. `fdroid rewritemeta` strips inline comments though, so the note below about the
-# 0.5.2 entry only survives here, not in the real submission.
+# passes cleanly.
+#
+# The pre-monorepo 0.5.2 release's Builds entry was dropped: its commit is from l9's old repo
+# history, which wasn't preserved in the move to this monorepo, so it could no longer be
+# independently rebuilt/re-verified under the Repo: below anyway.
 
 Categories:
   - Launcher
@@ -14,7 +17,7 @@ License: GPL-3.0-or-later
 AuthorName: Timo Furrer
 WebSite: https://nine.furrer.life
 SourceCode: https://git.sr.ht/~timofurrer/nine
-IssueTracker: https://todo.sr.ht/~timofurrer/l9
+IssueTracker: https://todo.sr.ht/~timofurrer/nine
 
 AutoName: L9
 
@@ -23,16 +26,6 @@ Repo: https://git.sr.ht/~timofurrer/nine
 Binaries: https://nine.furrer.life/releases/l9/%v/l9-%v.apk
 
 Builds:
-  - versionName: 0.5.2
-    versionCode: 7
-    commit: fe176a22da7245f0552c936490fec01b2189c634
-    subdir: app
-    gradle:
-      - yes
-    # Built from the pre-monorepo repo (git.sr.ht/~timofurrer/l9), history not preserved in the
-    # move to the nine monorepo - this commit no longer exists under Repo: above, so this entry
-    # can't be independently rebuilt/re-verified anymore. Left in place as history, not rebuilt.
-
   - versionName: 0.6.0
     versionCode: 8
     commit: v0.6.0

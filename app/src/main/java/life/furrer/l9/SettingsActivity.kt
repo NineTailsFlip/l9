@@ -48,7 +48,7 @@ private const val ROW_MANUAL_INTRO = 15
 private const val ROW_MANUAL_KEY_MAPPING = 16
 private const val ROW_MANUAL_ABOUT = 17
 private const val ROW_MANUAL_WEBSITE = 18
-private const val WEBSITE_URL = "https://l9.furrer.life"
+private const val WEBSITE_URL = "https://nine.furrer.life"
 
 private const val REQUEST_PICK_LEFT_APP = 300
 private const val REQUEST_PICK_RIGHT_APP = 301

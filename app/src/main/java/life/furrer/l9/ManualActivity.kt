@@ -146,8 +146,8 @@ class ManualActivity : Activity() {
 
             Version ${info.versionName} (build ${info.longVersionCode})
 
-            Source: https://git.sr.ht/~timofurrer/l9
-            Tickets: https://todo.sr.ht/~timofurrer/l9
+            Source: https://git.sr.ht/~timofurrer/nine
+            Tickets: https://todo.sr.ht/~timofurrer/nine
 
             Licensed under the GNU General Public License v3.0 or later. See the LICENSE file
             included with the source for the full text.
