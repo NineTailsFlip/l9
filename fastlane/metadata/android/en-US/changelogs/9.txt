@@ -1,0 +1,1 @@
+- No user-facing changes; fixes remaining old-repo/website links in the in-app manual and settings
