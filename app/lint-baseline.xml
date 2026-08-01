@@ -1,0 +1,539 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 8.5.0" type="baseline" client="gradle" dependencies="false" name="AGP (8.5.0)" variant="all" version="8.5.0">
+
+    <issue
+        id="PermissionImpliesUnsupportedChromeOsHardware"
+        message="Permission exists without corresponding hardware `&lt;uses-feature android:name=&quot;android.hardware.telephony&quot; required=&quot;false&quot;>` tag"
+        errorLine1="    &lt;uses-permission android:name=&quot;android.permission.CALL_PHONE&quot; />"
+        errorLine2="     ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="4"
+            column="6"/>
+    </issue>
+
+    <issue
+        id="DataExtractionRules"
+        message="The attribute `android:allowBackup` is deprecated from Android 12 and the default allows backup"
+        errorLine1="        android:allowBackup=&quot;true&quot;>"
+        errorLine2="                             ~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="19"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 34. Merge all the resources in this folder into `mipmap-anydpi`.">
+        <location
+            file="src/main/res/mipmap-anydpi-v26"/>
+    </issue>
+
+    <issue
+        id="VectorPath"
+        message="Very long vector path (818 characters), which is bad for performance. Considering reducing precision, removing minor details or rasterizing vector."
+        errorLine1="        android:pathData=&quot;M27,24 h10 a3,3 0 0 1 3,3 v10 a3,3 0 0 1 -3,3 h-10 a3,3 0 0 1 -3,-3 v-10 a3,3 0 0 1 3,-3 z"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/drawable/ic_launcher_monochrome.xml"
+            line="11"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="            text = &quot;No matches&quot;"
+        errorLine2="                   ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/AppPickerActivity.kt"
+            line="118"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="            text = &quot;No matches&quot;"
+        errorLine2="                    ~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/AppPickerActivity.kt"
+            line="118"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="            row.text = &quot;$checked ${calendar.displayName}&quot;"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/CalendarSelectionActivity.kt"
+            line="101"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="            text = &quot;•&quot;"
+        errorLine2="                   ~~~">
+        <location
+            file="src/main/java/life/furrer/l9/MainActivity.kt"
+            line="114"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="                    batteryView.text = &quot;$percent%&quot;"
+        errorLine2="                                       ~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/MainActivity.kt"
+            line="284"
+            column="40"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        timeFormatRow.text = &quot;Time format: ${if (is24Hour) &quot;24h&quot; else &quot;12h&quot;}&quot;"
+        errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="197"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        timeFormatRow.text = &quot;Time format: ${if (is24Hour) &quot;24h&quot; else &quot;12h&quot;}&quot;"
+        errorLine2="                              ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="197"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        slotCountRow.text = &quot;Home screen items: $slotCount&quot;"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="198"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        slotCountRow.text = &quot;Home screen items: $slotCount&quot;"
+        errorLine2="                             ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="198"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        showIndicesRow.text = &quot;Show indices: ${if (showIndices) &quot;yes&quot; else &quot;no&quot;}&quot;"
+        errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="199"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        showIndicesRow.text = &quot;Show indices: ${if (showIndices) &quot;yes&quot; else &quot;no&quot;}&quot;"
+        errorLine2="                               ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="199"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        alignmentRow.text = &quot;Alignment: ${alignment.name.lowercase()}&quot;"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="200"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        alignmentRow.text = &quot;Alignment: ${alignment.name.lowercase()}&quot;"
+        errorLine2="                             ~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="200"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        leftAppRow.text = &quot;Left key: ${AppRepository.getLeftApp(this)?.displayLabel ?: &quot;not set&quot;}&quot;"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="201"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        leftAppRow.text = &quot;Left key: ${AppRepository.getLeftApp(this)?.displayLabel ?: &quot;not set&quot;}&quot;"
+        errorLine2="                           ~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="201"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        rightAppRow.text = &quot;Right key: ${AppRepository.getRightApp(this)?.displayLabel ?: &quot;not set&quot;}&quot;"
+        errorLine2="                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="202"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        rightAppRow.text = &quot;Right key: ${AppRepository.getRightApp(this)?.displayLabel ?: &quot;not set&quot;}&quot;"
+        errorLine2="                            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="202"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        calendarEntriesRow.text = &quot;Calendar entries: $calendarEntryCount&quot;"
+        errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="203"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        calendarEntriesRow.text = &quot;Calendar entries: $calendarEntryCount&quot;"
+        errorLine2="                                   ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="203"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        calendarsRow.text = &quot;Calendars: ${calendarsSummary()}&quot;"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="204"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        calendarsRow.text = &quot;Calendars: ${calendarsSummary()}&quot;"
+        errorLine2="                             ~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="204"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        notificationsRow.text = &quot;Notification access: ${if (NotificationRepository.isListenerEnabled(this)) &quot;granted&quot; else &quot;not granted&quot;}&quot;"
+        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="205"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        notificationsRow.text = &quot;Notification access: ${if (NotificationRepository.isListenerEnabled(this)) &quot;granted&quot; else &quot;not granted&quot;}&quot;"
+        errorLine2="                                 ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="205"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        speedDialRow.text = &quot;Speed dial contacts: ${SpeedDialRepository.loadContacts(this).size} set&quot;"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="206"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        speedDialRow.text = &quot;Speed dial contacts: ${SpeedDialRepository.loadContacts(this).size} set&quot;"
+        errorLine2="                             ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="206"
+            column="30"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        speedDialRow.text = &quot;Speed dial contacts: ${SpeedDialRepository.loadContacts(this).size} set&quot;"
+        errorLine2="                                                                                                ~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="206"
+            column="97"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        calendarDividerRow.text = &quot;Calendar divider: ${if (showCalendarDivider) &quot;yes&quot; else &quot;no&quot;}&quot;"
+        errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="207"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        calendarDividerRow.text = &quot;Calendar divider: ${if (showCalendarDivider) &quot;yes&quot; else &quot;no&quot;}&quot;"
+        errorLine2="                                   ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="207"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        lockWallpaperRow.text = &quot;Set black wallpapers: ${if (blackWallpaperEnabled) &quot;enabled&quot; else &quot;disabled&quot;}&quot;"
+        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="208"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        lockWallpaperRow.text = &quot;Set black wallpapers: ${if (blackWallpaperEnabled) &quot;enabled&quot; else &quot;disabled&quot;}&quot;"
+        errorLine2="                                 ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="208"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        monospaceFontRow.text = &quot;Font: ${if (useMonospaceFont) &quot;monospace&quot; else &quot;proportional&quot;}&quot;"
+        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="209"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        monospaceFontRow.text = &quot;Font: ${if (useMonospaceFont) &quot;monospace&quot; else &quot;proportional&quot;}&quot;"
+        errorLine2="                                 ~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="209"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        exportSettingsRow.text = &quot;Export settings&quot;"
+        errorLine2="                                 ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="210"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        exportSettingsRow.text = &quot;Export settings&quot;"
+        errorLine2="                                  ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="210"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        importSettingsRow.text = &quot;Import settings&quot;"
+        errorLine2="                                 ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="211"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        importSettingsRow.text = &quot;Import settings&quot;"
+        errorLine2="                                  ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="211"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        manualIntroRow.text = &quot;Intro&quot;"
+        errorLine2="                              ~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="212"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        manualIntroRow.text = &quot;Intro&quot;"
+        errorLine2="                               ~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="212"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        manualKeyMappingRow.text = &quot;Key mapping&quot;"
+        errorLine2="                                   ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="213"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        manualKeyMappingRow.text = &quot;Key mapping&quot;"
+        errorLine2="                                    ~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="213"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        manualAboutRow.text = &quot;About&quot;"
+        errorLine2="                              ~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="214"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        manualAboutRow.text = &quot;About&quot;"
+        errorLine2="                               ~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="214"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        manualWebsiteRow.text = &quot;Open website&quot;"
+        errorLine2="                                ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="215"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        errorLine1="        manualWebsiteRow.text = &quot;Open website&quot;"
+        errorLine2="                                 ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SettingsActivity.kt"
+            line="215"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="            row.text = &quot;$digit: ${contact?.name ?: &quot;not set&quot;}&quot;"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/life/furrer/l9/SpeedDialSettingsActivity.kt"
+            line="97"
+            column="24"/>
+    </issue>
+
+</issues>
