@@ -1,0 +1,1 @@
+- No user-facing changes; F-Droid submission metadata cleanup

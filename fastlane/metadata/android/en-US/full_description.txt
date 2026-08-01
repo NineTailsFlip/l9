@@ -1,0 +1,19 @@
+L9 ("Launcher on 9 keys", an analogue to T9 "Text on 9 keys") is a minimal, all-black home
+launcher built for keypad phones — devices with a D-pad and a numeric/T9 keypad rather than
+a touchscreen.
+
+Features:
+
+* A configurable list of app slots (1-9), jumped to and launched directly by number key
+* Browse every installed app with T9 multi-tap predictive search
+* Left/Right D-pad keys as a second pair of independently configurable app shortcuts
+* Speed dial: hold a digit to call an assigned contact, with a warning before it places the call
+* Today's and tomorrow's calendar entries shown above the app list
+* A notification indicator and a low-battery warning color
+* Reorder, rename, and reassign slots entirely from the keypad, with no on-screen menus
+* Import and export all settings as a single file, with a system file picker for the location
+* An in-app manual explaining the concept and every key binding
+
+L9 has no runtime dependencies at all — no ad or analytics libraries, nothing. It only talks to
+the calendar, contacts, and notification APIs it needs for the features above, all locally on
+the device.
