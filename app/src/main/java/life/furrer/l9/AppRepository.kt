@@ -5,7 +5,6 @@ import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.text.format.DateFormat
 import life.furrer.nine.core.prefs.NinePrefs
 import org.json.JSONArray
 import org.json.JSONObject
@@ -15,7 +14,6 @@ enum class ListAlignment { LEFT, CENTER, RIGHT }
 object AppRepository {
     private const val KEY_SLOTS = "slots"
     private const val KEY_SLOT_COUNT = "slot_count"
-    private const val KEY_24_HOUR = "time_format_24h"
     private const val KEY_SHOW_INDICES = "show_indices"
     private const val KEY_ALIGNMENT = "list_alignment"
     private const val KEY_LEFT_APP = "left_app"
@@ -29,13 +27,6 @@ object AppRepository {
 
     fun setSlotCount(context: Context, count: Int) {
         prefs(context).edit().putInt(KEY_SLOT_COUNT, count).apply()
-    }
-
-    fun is24HourFormat(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_24_HOUR, DateFormat.is24HourFormat(context))
-
-    fun setIs24HourFormat(context: Context, value: Boolean) {
-        prefs(context).edit().putBoolean(KEY_24_HOUR, value).apply()
     }
 
     fun getShowIndices(context: Context): Boolean =

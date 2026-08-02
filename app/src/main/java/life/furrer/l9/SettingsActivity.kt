@@ -39,18 +39,17 @@ private const val ROW_LEFT_APP = 3
 private const val ROW_RIGHT_APP = 4
 private const val ROW_CALENDAR_ENTRIES = 5
 private const val ROW_CALENDARS = 6
-private const val ROW_TIME_FORMAT = 7
-private const val ROW_NOTIFICATIONS = 8
-private const val ROW_SPEED_DIAL = 9
-private const val ROW_CALENDAR_DIVIDER = 10
-private const val ROW_LOCK_WALLPAPER = 11
-private const val ROW_MONOSPACE_FONT = 12
-private const val ROW_EXPORT_SETTINGS = 13
-private const val ROW_IMPORT_SETTINGS = 14
-private const val ROW_MANUAL_INTRO = 15
-private const val ROW_MANUAL_KEY_MAPPING = 16
-private const val ROW_MANUAL_ABOUT = 17
-private const val ROW_MANUAL_WEBSITE = 18
+private const val ROW_NOTIFICATIONS = 7
+private const val ROW_SPEED_DIAL = 8
+private const val ROW_CALENDAR_DIVIDER = 9
+private const val ROW_LOCK_WALLPAPER = 10
+private const val ROW_MONOSPACE_FONT = 11
+private const val ROW_EXPORT_SETTINGS = 12
+private const val ROW_IMPORT_SETTINGS = 13
+private const val ROW_MANUAL_INTRO = 14
+private const val ROW_MANUAL_KEY_MAPPING = 15
+private const val ROW_MANUAL_ABOUT = 16
+private const val ROW_MANUAL_WEBSITE = 17
 private const val WEBSITE_URL = "https://nine.furrer.life"
 
 private const val REQUEST_PICK_LEFT_APP = 300
@@ -61,7 +60,6 @@ private const val REQUEST_IMPORT_SETTINGS = 303
 class SettingsActivity : Activity() {
 
     private var selectedIndex = 0
-    private var is24Hour = false
     private var slotCount = 4
     private var showIndices = true
     private var alignment = ListAlignment.LEFT
@@ -71,7 +69,6 @@ class SettingsActivity : Activity() {
     private var useMonospaceFont = false
 
     private lateinit var scrollView: ScrollView
-    private lateinit var timeFormatRow: TextView
     private lateinit var slotCountRow: TextView
     private lateinit var showIndicesRow: TextView
     private lateinit var alignmentRow: TextView
@@ -113,7 +110,6 @@ class SettingsActivity : Activity() {
         rightAppRow = makeRow()
         calendarEntriesRow = makeRow()
         calendarsRow = makeRow()
-        timeFormatRow = makeRow()
         notificationsRow = makeRow()
         speedDialRow = makeRow()
         calendarDividerRow = makeRow()
@@ -131,9 +127,6 @@ class SettingsActivity : Activity() {
 
         addSectionHeader(rowContainer, "Calendar")
         addRows(rowContainer, calendarEntriesRow, calendarsRow)
-
-        addSectionHeader(rowContainer, "Time")
-        addRows(rowContainer, timeFormatRow)
 
         addSectionHeader(rowContainer, "Notifications")
         addRows(rowContainer, notificationsRow)
@@ -181,7 +174,6 @@ class SettingsActivity : Activity() {
     }
 
     private fun reloadState() {
-        is24Hour = AppRepository.is24HourFormat(this)
         slotCount = AppRepository.getSlotCount(this)
         showIndices = AppRepository.getShowIndices(this)
         alignment = AppRepository.getAlignment(this)
@@ -197,7 +189,6 @@ class SettingsActivity : Activity() {
     }
 
     private fun render() {
-        timeFormatRow.text = "Time format: ${if (is24Hour) "24h" else "12h"}"
         slotCountRow.text = "Home screen items: $slotCount"
         showIndicesRow.text = "Show indices: ${if (showIndices) "yes" else "no"}"
         alignmentRow.text = "Alignment: ${alignment.name.lowercase()}"
@@ -421,10 +412,6 @@ class SettingsActivity : Activity() {
 
     private fun adjust(direction: Int) {
         when (selectedIndex) {
-            ROW_TIME_FORMAT -> {
-                is24Hour = !is24Hour
-                AppRepository.setIs24HourFormat(this, is24Hour)
-            }
             ROW_SLOT_COUNT -> {
                 slotCount = (slotCount + direction).coerceIn(MIN_SLOT_COUNT, MAX_SLOT_COUNT)
                 AppRepository.setSlotCount(this, slotCount)

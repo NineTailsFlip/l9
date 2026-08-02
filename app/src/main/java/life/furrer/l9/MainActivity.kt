@@ -202,13 +202,8 @@ class MainActivity : Activity() {
     }
 
     private fun configureClock() {
-        if (AppRepository.is24HourFormat(this)) {
-            clockView.format24Hour = "HH:mm"
-            clockView.format12Hour = null
-        } else {
-            clockView.format12Hour = "h:mm a"
-            clockView.format24Hour = null
-        }
+        clockView.format24Hour = "HH:mm"
+        clockView.format12Hour = null
     }
 
     private fun renderCalendar() {
@@ -224,10 +219,7 @@ class MainActivity : Activity() {
         // divider's symmetric margins the gap above and below it comes out equal.
         calendarContainer.setPadding(ROW_SIDE_PADDING, 0, ROW_SIDE_PADDING, 3)
         calendarDivider.visibility = if (AppRepository.getShowCalendarDivider(this)) View.VISIBLE else View.GONE
-        val timeFormat = SimpleDateFormat(
-            if (AppRepository.is24HourFormat(this)) "HH:mm" else "h:mm a",
-            Locale.getDefault(),
-        )
+        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
         val zone = ZoneId.systemDefault()
         val tomorrow = LocalDate.now(zone).plusDays(1)
         val now = System.currentTimeMillis()

@@ -20,7 +20,6 @@ class BackupRepositoryTest {
     @Test
     fun `exported settings round trip through import, restoring every preference type`() {
         AppRepository.setSlotCount(context, 6)
-        AppRepository.setIs24HourFormat(context, true)
         AppRepository.setShowIndices(context, false)
         AppRepository.setAlignment(context, ListAlignment.RIGHT)
         SpeedDialRepository.setContact(context, 1, SpeedDialContact("Alice", "12345"))
@@ -36,7 +35,6 @@ class BackupRepositoryTest {
         assertTrue(BackupRepository.importFrom(context, uri))
 
         assertEquals(6, AppRepository.getSlotCount(context))
-        assertTrue(AppRepository.is24HourFormat(context))
         assertFalse(AppRepository.getShowIndices(context))
         assertEquals(ListAlignment.RIGHT, AppRepository.getAlignment(context))
         assertEquals(
