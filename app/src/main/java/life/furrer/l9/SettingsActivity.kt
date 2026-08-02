@@ -1,227 +1,133 @@
 package life.furrer.l9
 
-import android.app.Activity
 import android.app.AlertDialog
 import android.app.WallpaperManager
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.Paint
-import android.net.Uri
-import android.os.Bundle
 import android.provider.Settings
-import android.view.KeyEvent
-import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import life.furrer.nine.core.manual.ManualActivity
-import life.furrer.nine.core.prefs.NinePrefs
-import life.furrer.nine.core.ui.Palette
-import life.furrer.nine.core.ui.applyConfiguredTheme
+import life.furrer.nine.core.NineSurface
+import life.furrer.nine.core.settings.NineSettingsActivity
+import life.furrer.nine.core.settings.SectionScope
+import life.furrer.nine.core.settings.SettingsScreen
 import life.furrer.nine.core.ui.dialogThemeResId
-import life.furrer.nine.core.ui.hideStatusBar
 
-private const val ROW_SIDE_PADDING = 28
 private const val MIN_SLOT_COUNT = 1
 private const val MAX_SLOT_COUNT = 9
 private const val MIN_CALENDAR_ENTRIES = 0
 private const val MAX_CALENDAR_ENTRIES = 9
-
-private const val ROW_SLOT_COUNT = 0
-private const val ROW_SHOW_INDICES = 1
-private const val ROW_ALIGNMENT = 2
-private const val ROW_LEFT_APP = 3
-private const val ROW_RIGHT_APP = 4
-private const val ROW_CALENDAR_ENTRIES = 5
-private const val ROW_CALENDARS = 6
-private const val ROW_NOTIFICATIONS = 7
-private const val ROW_SPEED_DIAL = 8
-private const val ROW_CALENDAR_DIVIDER = 9
-private const val ROW_LOCK_WALLPAPER = 10
-private const val ROW_MONOSPACE_FONT = 11
-private const val ROW_EXPORT_SETTINGS = 12
-private const val ROW_IMPORT_SETTINGS = 13
-private const val ROW_MANUAL_INTRO = 14
-private const val ROW_MANUAL_KEY_MAPPING = 15
-private const val ROW_MANUAL_ABOUT = 16
-private const val ROW_MANUAL_WEBSITE = 17
-private const val WEBSITE_URL = "https://nine.furrer.life"
 
 private const val REQUEST_PICK_LEFT_APP = 300
 private const val REQUEST_PICK_RIGHT_APP = 301
 private const val REQUEST_EXPORT_SETTINGS = 302
 private const val REQUEST_IMPORT_SETTINGS = 303
 
-class SettingsActivity : Activity() {
+/** L9's own sections on top of core's shared Theme/About — Apps, Calendar, Notifications, Speed
+ *  dial, and (until Phase 5 moves Backup into core) its own Backup section. */
+class SettingsActivity : NineSettingsActivity() {
 
-    private var selectedIndex = 0
-    private var slotCount = 4
-    private var showIndices = true
-    private var alignment = ListAlignment.LEFT
-    private var calendarEntryCount = 3
-    private var showCalendarDivider = true
-    private var blackWallpaperEnabled = false
-    private var useMonospaceFont = false
-
-    private lateinit var scrollView: ScrollView
-    private lateinit var slotCountRow: TextView
-    private lateinit var showIndicesRow: TextView
-    private lateinit var alignmentRow: TextView
-    private lateinit var leftAppRow: TextView
-    private lateinit var rightAppRow: TextView
-    private lateinit var calendarEntriesRow: TextView
-    private lateinit var calendarsRow: TextView
-    private lateinit var notificationsRow: TextView
-    private lateinit var speedDialRow: TextView
-    private lateinit var calendarDividerRow: TextView
-    private lateinit var lockWallpaperRow: TextView
-    private lateinit var monospaceFontRow: TextView
-    private lateinit var exportSettingsRow: TextView
-    private lateinit var importSettingsRow: TextView
-    private lateinit var manualIntroRow: TextView
-    private lateinit var manualKeyMappingRow: TextView
-    private lateinit var manualAboutRow: TextView
-    private lateinit var manualWebsiteRow: TextView
-    private val rows = mutableListOf<TextView>()
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        applyConfiguredTheme()
-
-        val rowContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        scrollView = ScrollView(this).apply {
-            addView(rowContainer)
-            isFocusable = false
-            isFocusableInTouchMode = false
-            descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+    override fun buildAppSections(screen: SettingsScreen, surface: NineSurface) {
+        screen.section("Apps") {
+            intRange(
+                label = "Home screen items",
+                min = MIN_SLOT_COUNT,
+                max = MAX_SLOT_COUNT,
+                get = { AppRepository.getSlotCount(this@SettingsActivity) },
+                set = { AppRepository.setSlotCount(this@SettingsActivity, it) },
+            )
+            toggle(
+                label = "Show indices",
+                get = { AppRepository.getShowIndices(this@SettingsActivity) },
+                set = { AppRepository.setShowIndices(this@SettingsActivity, it) },
+            )
+            choice(
+                label = "Alignment",
+                options = { ListAlignment.values().toList() },
+                get = { AppRepository.getAlignment(this@SettingsActivity) },
+                set = { AppRepository.setAlignment(this@SettingsActivity, it ?: ListAlignment.LEFT) },
+                render = { it.name.lowercase() },
+            )
+            action(
+                label = "Left key",
+                value = { AppRepository.getLeftApp(this@SettingsActivity)?.displayLabel ?: "not set" },
+                onSelect = {
+                    startActivityForResult(
+                        Intent(this@SettingsActivity, AppPickerActivity::class.java)
+                            .putExtra(AppPickerActivity.EXTRA_ALLOW_CLEAR, AppRepository.getLeftApp(this@SettingsActivity) != null),
+                        REQUEST_PICK_LEFT_APP,
+                    )
+                },
+            )
+            action(
+                label = "Right key",
+                value = { AppRepository.getRightApp(this@SettingsActivity)?.displayLabel ?: "not set" },
+                onSelect = {
+                    startActivityForResult(
+                        Intent(this@SettingsActivity, AppPickerActivity::class.java)
+                            .putExtra(AppPickerActivity.EXTRA_ALLOW_CLEAR, AppRepository.getRightApp(this@SettingsActivity) != null),
+                        REQUEST_PICK_RIGHT_APP,
+                    )
+                },
+            )
         }
-        setContentView(scrollView)
-        hideStatusBar()
 
-        slotCountRow = makeRow()
-        showIndicesRow = makeRow()
-        alignmentRow = makeRow()
-        leftAppRow = makeRow()
-        rightAppRow = makeRow()
-        calendarEntriesRow = makeRow()
-        calendarsRow = makeRow()
-        notificationsRow = makeRow()
-        speedDialRow = makeRow()
-        calendarDividerRow = makeRow()
-        lockWallpaperRow = makeRow()
-        monospaceFontRow = makeRow()
-        exportSettingsRow = makeRow()
-        importSettingsRow = makeRow()
-        manualIntroRow = makeRow()
-        manualKeyMappingRow = makeRow()
-        manualAboutRow = makeRow()
-        manualWebsiteRow = makeRow()
-
-        addSectionHeader(rowContainer, "Apps", isFirst = true)
-        addRows(rowContainer, slotCountRow, showIndicesRow, alignmentRow, leftAppRow, rightAppRow)
-
-        addSectionHeader(rowContainer, "Calendar")
-        addRows(rowContainer, calendarEntriesRow, calendarsRow)
-
-        addSectionHeader(rowContainer, "Notifications")
-        addRows(rowContainer, notificationsRow)
-
-        addSectionHeader(rowContainer, "Speed dial")
-        addRows(rowContainer, speedDialRow)
-
-        addSectionHeader(rowContainer, "Theme")
-        addRows(rowContainer, calendarDividerRow, lockWallpaperRow, monospaceFontRow)
-
-        addSectionHeader(rowContainer, "Backup")
-        addRows(rowContainer, exportSettingsRow, importSettingsRow)
-
-        addSectionHeader(rowContainer, "Manual")
-        addRows(rowContainer, manualIntroRow, manualKeyMappingRow, manualAboutRow, manualWebsiteRow)
-    }
-
-    private fun addSectionHeader(rowContainer: LinearLayout, title: String, isFirst: Boolean = false) {
-        val header = TextView(this).apply {
-            text = title.uppercase()
-            textSize = 15f
-            setTextColor(Palette.GRAY_MUTED)
-            letterSpacing = 0.1f
-            setPadding(ROW_SIDE_PADDING, if (isFirst) 30 else 48, ROW_SIDE_PADDING, 10)
+        screen.section("Calendar") {
+            intRange(
+                label = "Calendar entries",
+                min = MIN_CALENDAR_ENTRIES,
+                max = MAX_CALENDAR_ENTRIES,
+                get = { CalendarRepository.getEntryCount(this@SettingsActivity) },
+                set = { CalendarRepository.setEntryCount(this@SettingsActivity, it) },
+            )
+            action(
+                label = "Calendars",
+                value = { calendarsSummary() },
+                onSelect = { startActivity(Intent(this@SettingsActivity, CalendarSelectionActivity::class.java)) },
+            )
         }
-        rowContainer.addView(header)
-    }
 
-    private fun addRows(rowContainer: LinearLayout, vararg newRows: TextView) {
-        newRows.forEach { row ->
-            rows.add(row)
-            rowContainer.addView(row)
+        screen.section("Notifications") {
+            action(
+                label = "Notification access",
+                value = { if (NotificationRepository.isListenerEnabled(this@SettingsActivity)) "granted" else "not granted" },
+                onSelect = { confirmOpenNotificationSettings() },
+            )
+        }
+
+        screen.section("Speed dial") {
+            action(
+                label = "Speed dial contacts",
+                value = { "${SpeedDialRepository.loadContacts(this@SettingsActivity).size} set" },
+                onSelect = { startActivity(Intent(this@SettingsActivity, SpeedDialSettingsActivity::class.java)) },
+            )
         }
     }
 
-    private fun makeRow(): TextView = TextView(this).apply {
-        textSize = 28f
-        setPadding(ROW_SIDE_PADDING, 3, ROW_SIDE_PADDING, 3)
+    // Backup moves into core's shared Settings framework in a later phase; until then L9 supplies
+    // its own rows for the section core already reserves in the shared Theme/Backup/About order.
+    override fun buildBackupSection(scope: SectionScope) {
+        scope.action(label = "Export settings", onSelect = { exportSettings() })
+        scope.action(label = "Import settings", onSelect = { confirmImportSettings() })
     }
 
-    override fun onResume() {
-        super.onResume()
-        reloadState()
-        render()
-    }
-
-    private fun reloadState() {
-        slotCount = AppRepository.getSlotCount(this)
-        showIndices = AppRepository.getShowIndices(this)
-        alignment = AppRepository.getAlignment(this)
-        calendarEntryCount = CalendarRepository.getEntryCount(this)
-        showCalendarDivider = AppRepository.getShowCalendarDivider(this)
-        blackWallpaperEnabled = AppRepository.isBlackWallpaperEnabled(this)
-        useMonospaceFont = NinePrefs.useMonospaceFont(this)
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) hideStatusBar()
-    }
-
-    private fun render() {
-        slotCountRow.text = "Home screen items: $slotCount"
-        showIndicesRow.text = "Show indices: ${if (showIndices) "yes" else "no"}"
-        alignmentRow.text = "Alignment: ${alignment.name.lowercase()}"
-        leftAppRow.text = "Left key: ${AppRepository.getLeftApp(this)?.displayLabel ?: "not set"}"
-        rightAppRow.text = "Right key: ${AppRepository.getRightApp(this)?.displayLabel ?: "not set"}"
-        calendarEntriesRow.text = "Calendar entries: $calendarEntryCount"
-        calendarsRow.text = "Calendars: ${calendarsSummary()}"
-        notificationsRow.text = "Notification access: ${if (NotificationRepository.isListenerEnabled(this)) "granted" else "not granted"}"
-        speedDialRow.text = "Speed dial contacts: ${SpeedDialRepository.loadContacts(this).size} set"
-        calendarDividerRow.text = "Calendar divider: ${if (showCalendarDivider) "yes" else "no"}"
-        lockWallpaperRow.text = "Set black wallpapers: ${if (blackWallpaperEnabled) "enabled" else "disabled"}"
-        monospaceFontRow.text = "Font: ${if (useMonospaceFont) "monospace" else "proportional"}"
-        exportSettingsRow.text = "Export settings"
-        importSettingsRow.text = "Import settings"
-        manualIntroRow.text = "Intro"
-        manualKeyMappingRow.text = "Key mapping"
-        manualAboutRow.text = "About"
-        manualWebsiteRow.text = "Open website"
-
-        rows.forEachIndexed { index, row ->
-            val selected = index == selectedIndex
-            row.setTextColor(if (selected) Color.WHITE else Palette.GRAY_DIM)
-            row.paintFlags = if (selected) {
-                row.paintFlags or Paint.UNDERLINE_TEXT_FLAG
-            } else {
-                row.paintFlags and Paint.UNDERLINE_TEXT_FLAG.inv()
-            }
-        }
-        rows.getOrNull(selectedIndex)?.let { row ->
-            // Scroll to the absolute top for the first row so its section header stays visible.
-            scrollView.post { scrollView.smoothScrollTo(0, if (selectedIndex == 0) 0 else row.top) }
-        }
+    override fun buildThemeExtras(scope: SectionScope) {
+        scope.toggle(
+            label = "Calendar divider",
+            get = { AppRepository.getShowCalendarDivider(this) },
+            set = { AppRepository.setShowCalendarDivider(this, it) },
+        )
+        scope.toggle(
+            label = "Set black wallpapers",
+            get = { AppRepository.isBlackWallpaperEnabled(this) },
+            set = { enabled -> if (enabled) confirmEnableBlackWallpapers() else AppRepository.setBlackWallpaperEnabled(this, false) },
+            on = "enabled",
+            off = "disabled",
+        )
     }
 
     private fun calendarsSummary(): String {
@@ -234,59 +140,6 @@ class SettingsActivity : Activity() {
             selectedIds.isEmpty() -> "none"
             else -> "${selectedIds.size} of ${all.size}"
         }
-    }
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_UP -> {
-                selectedIndex = (selectedIndex - 1 + rows.size) % rows.size
-                render()
-                return true
-            }
-            KeyEvent.KEYCODE_DPAD_DOWN -> {
-                selectedIndex = (selectedIndex + 1) % rows.size
-                render()
-                return true
-            }
-            KeyEvent.KEYCODE_DPAD_LEFT -> {
-                adjust(-1)
-                return true
-            }
-            KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                adjust(1)
-                return true
-            }
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                when (selectedIndex) {
-                    ROW_LEFT_APP -> startActivityForResult(
-                        Intent(this, AppPickerActivity::class.java)
-                            .putExtra(AppPickerActivity.EXTRA_ALLOW_CLEAR, AppRepository.getLeftApp(this) != null),
-                        REQUEST_PICK_LEFT_APP,
-                    )
-                    ROW_RIGHT_APP -> startActivityForResult(
-                        Intent(this, AppPickerActivity::class.java)
-                            .putExtra(AppPickerActivity.EXTRA_ALLOW_CLEAR, AppRepository.getRightApp(this) != null),
-                        REQUEST_PICK_RIGHT_APP,
-                    )
-                    ROW_CALENDARS -> startActivity(Intent(this, CalendarSelectionActivity::class.java))
-                    ROW_NOTIFICATIONS -> confirmOpenNotificationSettings()
-                    ROW_SPEED_DIAL -> startActivity(Intent(this, SpeedDialSettingsActivity::class.java))
-                    ROW_EXPORT_SETTINGS -> exportSettings()
-                    ROW_IMPORT_SETTINGS -> confirmImportSettings()
-                    ROW_MANUAL_INTRO -> openManual(ManualActivity.PAGE_INTRO)
-                    ROW_MANUAL_KEY_MAPPING -> openManual(ManualActivity.PAGE_KEY_MAPPING)
-                    ROW_MANUAL_ABOUT -> openManual(ManualActivity.PAGE_ABOUT)
-                    ROW_MANUAL_WEBSITE -> openWebsite()
-                    else -> adjust(1)
-                }
-                return true
-            }
-            KeyEvent.KEYCODE_BACK -> {
-                finish()
-                return true
-            }
-        }
-        return super.onKeyDown(keyCode, event)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -302,13 +155,10 @@ class SettingsActivity : Activity() {
         if (requestCode == REQUEST_IMPORT_SETTINGS) {
             val uri = data?.data
             if (resultCode == RESULT_OK && uri != null) {
-                if (BackupRepository.importFrom(this, uri)) {
-                    reloadState()
-                    render()
-                    Toast.makeText(this, "Settings imported", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, "Import failed — not a valid L9 backup file", Toast.LENGTH_SHORT).show()
-                }
+                val imported = BackupRepository.importFrom(this, uri)
+                if (imported) refresh()
+                val message = if (imported) "Settings imported" else "Import failed — not a valid L9 backup file"
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
             }
             return
         }
@@ -328,15 +178,7 @@ class SettingsActivity : Activity() {
         } else {
             AppRepository.setRightApp(this, entry)
         }
-        render()
-    }
-
-    private fun openManual(page: String) {
-        startActivity(ManualActivity.intentFor(this, page))
-    }
-
-    private fun openWebsite() {
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(WEBSITE_URL)))
+        refresh()
     }
 
     private fun exportSettings() {
@@ -385,72 +227,23 @@ class SettingsActivity : Activity() {
         AlertDialog.Builder(this, dialogThemeResId())
             .setTitle("Black wallpapers")
             .setMessage("Replace your current lock screen and home screen wallpapers with solid black?")
-            .setPositiveButton("Set") { _, _ ->
-                if (setWallpapersBlack()) {
-                    blackWallpaperEnabled = true
-                    AppRepository.setBlackWallpaperEnabled(this, true)
-                }
-                render()
-            }
+            .setPositiveButton("Set") { _, _ -> setWallpapersBlack() }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
-    private fun setWallpapersBlack(): Boolean {
+    private fun setWallpapersBlack() {
         val bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLACK) }
-        return try {
+        try {
             WallpaperManager.getInstance(this)
                 .setBitmap(bitmap, null, false, WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK)
+            AppRepository.setBlackWallpaperEnabled(this, true)
             Toast.makeText(this, "Wallpapers set to black", Toast.LENGTH_SHORT).show()
-            true
         } catch (e: IOException) {
             Toast.makeText(this, "Couldn't set wallpapers", Toast.LENGTH_SHORT).show()
-            false
         } finally {
             bitmap.recycle()
+            refresh()
         }
-    }
-
-    private fun adjust(direction: Int) {
-        when (selectedIndex) {
-            ROW_SLOT_COUNT -> {
-                slotCount = (slotCount + direction).coerceIn(MIN_SLOT_COUNT, MAX_SLOT_COUNT)
-                AppRepository.setSlotCount(this, slotCount)
-            }
-            ROW_SHOW_INDICES -> {
-                showIndices = !showIndices
-                AppRepository.setShowIndices(this, showIndices)
-            }
-            ROW_ALIGNMENT -> {
-                val values = ListAlignment.values()
-                val nextIndex = (values.indexOf(alignment) + direction + values.size) % values.size
-                alignment = values[nextIndex]
-                AppRepository.setAlignment(this, alignment)
-            }
-            ROW_CALENDAR_ENTRIES -> {
-                calendarEntryCount = (calendarEntryCount + direction).coerceIn(MIN_CALENDAR_ENTRIES, MAX_CALENDAR_ENTRIES)
-                CalendarRepository.setEntryCount(this, calendarEntryCount)
-            }
-            ROW_CALENDAR_DIVIDER -> {
-                showCalendarDivider = !showCalendarDivider
-                AppRepository.setShowCalendarDivider(this, showCalendarDivider)
-            }
-            ROW_LOCK_WALLPAPER -> {
-                if (blackWallpaperEnabled) {
-                    blackWallpaperEnabled = false
-                    AppRepository.setBlackWallpaperEnabled(this, false)
-                } else {
-                    confirmEnableBlackWallpapers()
-                }
-            }
-            ROW_MONOSPACE_FONT -> {
-                useMonospaceFont = !useMonospaceFont
-                NinePrefs.setUseMonospaceFont(this, useMonospaceFont)
-                // The theme's default TextView style only applies to views created after it's
-                // set, so this screen needs to be rebuilt for the change to show immediately.
-                recreate()
-            }
-        }
-        render()
     }
 }
