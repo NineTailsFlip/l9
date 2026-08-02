@@ -14,8 +14,11 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import life.furrer.nine.core.ui.Palette
+import life.furrer.nine.core.ui.hideStatusBar
+import life.furrer.nine.core.util.KeyRouter
+import life.furrer.nine.core.util.NineAction
 
-private const val DIM_GREY = 0xFF8A8A8A.toInt()
 private const val ROW_SIDE_PADDING = 28
 private const val REQUEST_CALL_PERMISSION = 200
 private const val REQUEST_PICK_CONTACT = 201
@@ -96,7 +99,7 @@ class SpeedDialSettingsActivity : Activity() {
             val contact = contacts[digit]
             row.text = "$digit: ${contact?.name ?: "not set"}"
             val selected = index == selectedIndex
-            row.setTextColor(if (selected) Color.WHITE else DIM_GREY)
+            row.setTextColor(if (selected) Color.WHITE else Palette.GRAY_DIM)
             row.paintFlags = if (selected) {
                 row.paintFlags or Paint.UNDERLINE_TEXT_FLAG
             } else {
@@ -115,12 +118,12 @@ class SpeedDialSettingsActivity : Activity() {
             return true
         }
         when (KeyRouter.map(keyCode, event.number)) {
-            Action.Up -> {
+            NineAction.Up -> {
                 selectedIndex = (selectedIndex - 1 + rows.size) % rows.size
                 render()
                 return true
             }
-            Action.Down -> {
+            NineAction.Down -> {
                 selectedIndex = (selectedIndex + 1) % rows.size
                 render()
                 return true

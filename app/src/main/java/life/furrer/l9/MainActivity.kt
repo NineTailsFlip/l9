@@ -35,14 +35,12 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
+import life.furrer.nine.core.ui.Palette
+import life.furrer.nine.core.ui.hideStatusBar
+import life.furrer.nine.core.util.KeyRouter
+import life.furrer.nine.core.util.NineAction
 
-private const val DIM_GREY = 0xFF8A8A8A.toInt()
-private const val CALENDAR_TIME_GREY = 0xFF666666.toInt()
-private const val CALENDAR_TIME_SOON_GREEN = 0xFF89E1A7.toInt()
 private const val SOON_WINDOW_MILLIS = 30 * 60 * 1000L
-private const val DIM_NUMBER = 0xFF4D4D4D.toInt()
-private const val BRIGHT_NUMBER = 0xFF8A8A8A.toInt()
-private const val LOW_BATTERY_RED = 0xFFCF6679.toInt()
 private const val LOW_BATTERY_THRESHOLD = 20
 private const val REQUEST_PICK_APP = 1
 private const val INDEX_COLUMN_WIDTH = 104
@@ -51,6 +49,32 @@ private const val DIVIDER_GREY = 0xFF333333.toInt()
 private const val SPEED_DIAL_WARNING_DELAY_MS = 2000L
 private const val SPEED_DIAL_CALL_DELAY_MS = 3000L
 private const val STAR_SEQUENCE_TIMEOUT_MS = 500L
+
+/** The home screen's own key vocabulary — Star means "reorder toggle" and digit 0 means "browse
+ *  all" here, neither of which is universal key routing, just what this screen does with those
+ *  keys. Translated from core's [NineAction] rather than duplicating [KeyRouter]'s keycode
+ *  matching. */
+private sealed interface Action {
+    data object Up : Action
+    data object Down : Action
+    data object Select : Action
+    data object BrowseAll : Action
+    data object LeftKey : Action
+    data object RightKey : Action
+    data object ReorderToggle : Action
+    data class Digit(val n: Int) : Action
+}
+
+private fun homeAction(keyCode: Int, number: Char): Action? = when (val action = KeyRouter.map(keyCode, number)) {
+    NineAction.Up -> Action.Up
+    NineAction.Down -> Action.Down
+    NineAction.Select -> Action.Select
+    NineAction.Left -> Action.LeftKey
+    NineAction.Right -> Action.RightKey
+    NineAction.Star -> Action.ReorderToggle
+    is NineAction.Digit -> if (action.n == 0) Action.BrowseAll else Action.Digit(action.n)
+    else -> null
+}
 
 class MainActivity : Activity() {
 
@@ -119,7 +143,7 @@ class MainActivity : Activity() {
         }
         batteryView = TextView(this).apply {
             textSize = 16f
-            setTextColor(DIM_GREY)
+            setTextColor(Palette.GRAY_DIM)
         }
         header.addView(clockView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         header.addView(notificationDot)
@@ -219,10 +243,10 @@ class MainActivity : Activity() {
                 text = SpannableString(timeText).apply {
                     var start = 0
                     if (isTomorrow) {
-                        setSpan(ForegroundColorSpan(DIM_NUMBER), 0, prefix.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        setSpan(ForegroundColorSpan(Palette.GRAY_FAINT), 0, prefix.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                         start = prefix.length
                     }
-                    val timeColor = if (isSoon) CALENDAR_TIME_SOON_GREEN else CALENDAR_TIME_GREY
+                    val timeColor = if (isSoon) Palette.GREEN else Palette.GRAY_MUTED
                     setSpan(ForegroundColorSpan(timeColor), start, timeText.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
             }
@@ -235,7 +259,7 @@ class MainActivity : Activity() {
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
                 gravity = Gravity.END
-                setTextColor(if (isSoon) CALENDAR_TIME_SOON_GREEN else DIM_GREY)
+                setTextColor(if (isSoon) Palette.GREEN else Palette.GRAY_DIM)
                 text = event.title
                 setPadding(paint.measureText("00").toInt(), 0, 0, 0)
             }
@@ -282,7 +306,7 @@ class MainActivity : Activity() {
                 if (level >= 0 && scale > 0) {
                     val percent = level * 100 / scale
                     batteryView.text = "$percent%"
-                    batteryView.setTextColor(if (percent < LOW_BATTERY_THRESHOLD) LOW_BATTERY_RED else DIM_GREY)
+                    batteryView.setTextColor(if (percent < LOW_BATTERY_THRESHOLD) Palette.RED else Palette.GRAY_DIM)
                 }
             }
         }
@@ -364,7 +388,7 @@ class MainActivity : Activity() {
             val number = if (index == 9) "0" else "${index + 1}"
             val numberView = numberViews[index]
             numberView.text = number
-            numberView.setTextColor(if (selected) BRIGHT_NUMBER else DIM_NUMBER)
+            numberView.setTextColor(if (selected) Palette.GRAY_DIM else Palette.GRAY_FAINT)
             numberView.visibility = if (showIndices && !inlineIndex) View.VISIBLE else View.GONE
             numberView.setPadding(0, 0, 32, 0)
             numberView.layoutParams = LinearLayout.LayoutParams(INDEX_COLUMN_WIDTH, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -373,12 +397,12 @@ class MainActivity : Activity() {
             val label = labelViews[index]
             val baseText = entry?.displayLabel ?: "press *0 to set"
             val displayText = if (selected && reorderModeActive) "↕ $baseText" else baseText
-            val labelColor = if (selected) Color.WHITE else DIM_GREY
+            val labelColor = if (selected) Color.WHITE else Palette.GRAY_DIM
             if (inlineIndex) {
                 val prefix = "$number  "
                 val fullText = "$prefix$displayText"
                 label.text = SpannableString(fullText).apply {
-                    val numberColor = if (selected) BRIGHT_NUMBER else DIM_NUMBER
+                    val numberColor = if (selected) Palette.GRAY_DIM else Palette.GRAY_FAINT
                     setSpan(ForegroundColorSpan(numberColor), 0, prefix.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                     setSpan(ForegroundColorSpan(labelColor), prefix.length, fullText.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                     if (selected) {
@@ -459,7 +483,7 @@ class MainActivity : Activity() {
             pendingStarKeyCode = keyCode
             return true
         }
-        val action = KeyRouter.map(keyCode, event.number)
+        val action = homeAction(keyCode, event.number)
         if (action == Action.Select) {
             onSelect(selectedIndex)
             return true
@@ -505,7 +529,7 @@ class MainActivity : Activity() {
     /** While reordering, only up/down (swap) and star/back (drop) do anything — everything
      *  else is swallowed so a stray digit/OK/etc. press can't act on a slot mid-move. */
     private fun handleReorderKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        when (KeyRouter.map(keyCode, event.number)) {
+        when (homeAction(keyCode, event.number)) {
             Action.Up -> swapSlot(-1)
             Action.Down -> swapSlot(1)
             Action.ReorderToggle -> {
@@ -567,7 +591,7 @@ class MainActivity : Activity() {
             pendingStarKeyCode = null
             return true
         }
-        val action = KeyRouter.map(keyCode, event.number)
+        val action = homeAction(keyCode, event.number)
         if (action == Action.LeftKey || action == Action.RightKey) {
             if (pendingSideKeyCode == keyCode && !sideLongPressHandled) {
                 onSideSelect(if (action == Action.LeftKey) PendingTarget.LEFT else PendingTarget.RIGHT)
@@ -626,7 +650,7 @@ class MainActivity : Activity() {
             startActivity(Intent(this, SettingsActivity::class.java))
             return true
         }
-        val action = KeyRouter.map(keyCode, event.number)
+        val action = homeAction(keyCode, event.number)
         if (action == Action.LeftKey || action == Action.RightKey) {
             sideLongPressHandled = true
             openPickerForSide(if (action == Action.LeftKey) PendingTarget.LEFT else PendingTarget.RIGHT)

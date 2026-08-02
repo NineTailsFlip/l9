@@ -20,9 +20,9 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import life.furrer.nine.core.ui.Palette
+import life.furrer.nine.core.ui.hideStatusBar
 
-private const val DIM_GREY = 0xFF8A8A8A.toInt()
-private const val SECTION_HEADER_GREY = 0xFF666666.toInt()
 private const val ROW_SIDE_PADDING = 28
 private const val MIN_SLOT_COUNT = 1
 private const val MAX_SLOT_COUNT = 9
@@ -152,7 +152,7 @@ class SettingsActivity : Activity() {
         val header = TextView(this).apply {
             text = title.uppercase()
             textSize = 15f
-            setTextColor(SECTION_HEADER_GREY)
+            setTextColor(Palette.GRAY_MUTED)
             letterSpacing = 0.1f
             setPadding(ROW_SIDE_PADDING, if (isFirst) 30 else 48, ROW_SIDE_PADDING, 10)
         }
@@ -216,7 +216,7 @@ class SettingsActivity : Activity() {
 
         rows.forEachIndexed { index, row ->
             val selected = index == selectedIndex
-            row.setTextColor(if (selected) Color.WHITE else DIM_GREY)
+            row.setTextColor(if (selected) Color.WHITE else Palette.GRAY_DIM)
             row.paintFlags = if (selected) {
                 row.paintFlags or Paint.UNDERLINE_TEXT_FLAG
             } else {

@@ -10,8 +10,11 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import life.furrer.nine.core.ui.Palette
+import life.furrer.nine.core.ui.hideStatusBar
+import life.furrer.nine.core.util.KeyRouter
+import life.furrer.nine.core.util.NineAction
 
-private const val DIM_GREY = 0xFF8A8A8A.toInt()
 private const val ROW_SIDE_PADDING = 28
 private const val REQUEST_CALENDAR_PERMISSION = 100
 
@@ -78,7 +81,7 @@ class CalendarSelectionActivity : Activity() {
             val message = TextView(this).apply {
                 text = if (hasPermission) "No calendars found" else "Calendar permission denied"
                 textSize = 24f
-                setTextColor(DIM_GREY)
+                setTextColor(Palette.GRAY_DIM)
                 setPadding(ROW_SIDE_PADDING, 30, ROW_SIDE_PADDING, 30)
             }
             rowContainer.addView(message)
@@ -100,7 +103,7 @@ class CalendarSelectionActivity : Activity() {
             val checked = if (calendar.id in selected) "[x]" else "[ ]"
             row.text = "$checked ${calendar.displayName}"
             val isSelectedRow = index == selectedIndex
-            row.setTextColor(if (isSelectedRow) Color.WHITE else DIM_GREY)
+            row.setTextColor(if (isSelectedRow) Color.WHITE else Palette.GRAY_DIM)
             row.paintFlags = if (isSelectedRow) {
                 row.paintFlags or Paint.UNDERLINE_TEXT_FLAG
             } else {
@@ -121,17 +124,17 @@ class CalendarSelectionActivity : Activity() {
             return super.onKeyDown(keyCode, event)
         }
         when (KeyRouter.map(keyCode, event.number)) {
-            Action.Up -> {
+            NineAction.Up -> {
                 selectedIndex = (selectedIndex - 1 + rows.size) % rows.size
                 render()
                 return true
             }
-            Action.Down -> {
+            NineAction.Down -> {
                 selectedIndex = (selectedIndex + 1) % rows.size
                 render()
                 return true
             }
-            Action.Select -> {
+            NineAction.Select -> {
                 toggleSelected()
                 return true
             }

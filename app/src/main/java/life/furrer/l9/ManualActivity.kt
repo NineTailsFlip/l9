@@ -10,8 +10,9 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import life.furrer.nine.core.ui.Palette
+import life.furrer.nine.core.ui.hideStatusBar
 
-private const val DIM_GREY = 0xFF8A8A8A.toInt()
 private const val ROW_SIDE_PADDING = 28
 private const val KEY_COLUMN_WIDTH = 170
 
@@ -51,7 +52,7 @@ class ManualActivity : Activity() {
                     TextView(this@ManualActivity).apply {
                         text = body
                         textSize = 18f
-                        setTextColor(DIM_GREY)
+                        setTextColor(Palette.GRAY_DIM)
                         setLineSpacing(8f, 1f)
                         setPadding(ROW_SIDE_PADDING, 0, ROW_SIDE_PADDING, 30)
                     },
@@ -78,7 +79,7 @@ class ManualActivity : Activity() {
         val descriptionView = TextView(this).apply {
             text = description
             textSize = 14f
-            setTextColor(DIM_GREY)
+            setTextColor(Palette.GRAY_DIM)
             setLineSpacing(4f, 1f)
         }
         return LinearLayout(this).apply {

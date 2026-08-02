@@ -16,8 +16,11 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import life.furrer.nine.core.ui.Palette
+import life.furrer.nine.core.ui.hideStatusBar
+import life.furrer.nine.core.util.KeyRouter
+import life.furrer.nine.core.util.NineAction
 
-private const val DIM_GREY = 0xFF8A8A8A.toInt()
 private const val DIVIDER_GREY = 0xFF333333.toInt()
 private const val LEAKED_CHAR_WINDOW_MS = 900L
 private const val ROW_SIDE_PADDING = 28
@@ -92,7 +95,7 @@ class AppPickerActivity : Activity() {
             isFocusableInTouchMode = false
             textSize = 16f
             setTextColor(Color.WHITE)
-            setHintTextColor(DIM_GREY)
+            setHintTextColor(Palette.GRAY_DIM)
             hint = "Type to search"
             setPadding(ROW_SIDE_PADDING, 20, ROW_SIDE_PADDING, 10)
             addTextChangedListener(object : TextWatcher {
@@ -117,7 +120,7 @@ class AppPickerActivity : Activity() {
         noMatchesLabel = TextView(this).apply {
             text = "No matches"
             textSize = 16f
-            setTextColor(DIM_GREY)
+            setTextColor(Palette.GRAY_DIM)
             setPadding(ROW_SIDE_PADDING, 10, ROW_SIDE_PADDING, 10)
             visibility = View.GONE
         }
@@ -199,7 +202,7 @@ class AppPickerActivity : Activity() {
     private fun render() {
         rows.forEachIndexed { index, row ->
             val selected = index == selectedIndex
-            row.setTextColor(if (selected) Color.WHITE else DIM_GREY)
+            row.setTextColor(if (selected) Color.WHITE else Palette.GRAY_DIM)
             row.paintFlags = if (selected) {
                 row.paintFlags or Paint.UNDERLINE_TEXT_FLAG
             } else {
@@ -230,9 +233,9 @@ class AppPickerActivity : Activity() {
         if (event.keyCode in RESERVED_NAV_KEYS) {
             if (event.action == KeyEvent.ACTION_DOWN) {
                 when (KeyRouter.map(event.keyCode, event.number)) {
-                    Action.Up -> moveSelection(-1)
-                    Action.Down -> moveSelection(1)
-                    Action.Select -> confirmSelection()
+                    NineAction.Up -> moveSelection(-1)
+                    NineAction.Down -> moveSelection(1)
+                    NineAction.Select -> confirmSelection()
                     else -> {}
                 }
             }
