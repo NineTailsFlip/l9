@@ -16,7 +16,7 @@
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
-        android:theme="@style/Theme.L9"
+        android:theme="@style/Theme.Nine"
         android:allowBackup="true">
 
         <activity
@@ -38,28 +38,28 @@
             android:name=".AppPickerActivity"
             android:exported="false"
             android:windowSoftInputMode="stateAlwaysHidden"
-            android:theme="@style/Theme.L9" />
+            android:theme="@style/Theme.Nine" />
 
         <activity
             android:name=".SettingsActivity"
             android:exported="false"
-            android:theme="@style/Theme.L9" />
+            android:theme="@style/Theme.Nine" />
 
         <activity
             android:name=".CalendarSelectionActivity"
             android:exported="false"
-            android:theme="@style/Theme.L9" />
+            android:theme="@style/Theme.Nine" />
 
         <activity
             android:name=".SpeedDialSettingsActivity"
             android:exported="false"
-            android:theme="@style/Theme.L9" />
+            android:theme="@style/Theme.Nine" />
 
         <activity
             android:name=".ManualActivity"
             android:exported="false"
             android:windowSoftInputMode="stateAlwaysHidden"
-            android:theme="@style/Theme.L9" />
+            android:theme="@style/Theme.Nine" />
 
         <service
             android:name=".NotificationListener"

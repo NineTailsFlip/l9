@@ -6,13 +6,13 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.text.format.DateFormat
+import life.furrer.nine.core.prefs.NinePrefs
 import org.json.JSONArray
 import org.json.JSONObject
 
 enum class ListAlignment { LEFT, CENTER, RIGHT }
 
 object AppRepository {
-    private const val PREFS_NAME = "l9"
     private const val KEY_SLOTS = "slots"
     private const val KEY_SLOT_COUNT = "slot_count"
     private const val KEY_24_HOUR = "time_format_24h"
@@ -22,7 +22,6 @@ object AppRepository {
     private const val KEY_RIGHT_APP = "right_app"
     private const val KEY_SHOW_CALENDAR_DIVIDER = "show_calendar_divider"
     private const val KEY_BLACK_WALLPAPER_ENABLED = "black_wallpaper_enabled"
-    private const val KEY_USE_MONOSPACE_FONT = "use_monospace_font"
     private const val DEFAULT_SLOT_COUNT = 4
 
     fun getSlotCount(context: Context): Int =
@@ -58,13 +57,6 @@ object AppRepository {
 
     fun setBlackWallpaperEnabled(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_BLACK_WALLPAPER_ENABLED, value).apply()
-    }
-
-    fun useMonospaceFont(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_USE_MONOSPACE_FONT, true)
-
-    fun setUseMonospaceFont(context: Context, value: Boolean) {
-        prefs(context).edit().putBoolean(KEY_USE_MONOSPACE_FONT, value).apply()
     }
 
     fun getAlignment(context: Context): ListAlignment {
@@ -148,6 +140,5 @@ object AppRepository {
         }
     }
 
-    private fun prefs(context: Context) =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private fun prefs(context: Context) = NinePrefs.of(context)
 }

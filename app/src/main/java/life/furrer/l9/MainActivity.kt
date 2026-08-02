@@ -36,7 +36,10 @@ import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 import life.furrer.nine.core.ui.Palette
+import life.furrer.nine.core.ui.applyConfiguredTheme
+import life.furrer.nine.core.ui.dialogThemeResId
 import life.furrer.nine.core.ui.hideStatusBar
+import life.furrer.nine.core.ui.recreateIfFontChanged
 import life.furrer.nine.core.util.KeyRouter
 import life.furrer.nine.core.util.NineAction
 

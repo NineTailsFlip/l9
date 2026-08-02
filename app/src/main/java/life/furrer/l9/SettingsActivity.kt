@@ -20,7 +20,10 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import life.furrer.nine.core.prefs.NinePrefs
 import life.furrer.nine.core.ui.Palette
+import life.furrer.nine.core.ui.applyConfiguredTheme
+import life.furrer.nine.core.ui.dialogThemeResId
 import life.furrer.nine.core.ui.hideStatusBar
 
 private const val ROW_SIDE_PADDING = 28
@@ -185,7 +188,7 @@ class SettingsActivity : Activity() {
         calendarEntryCount = CalendarRepository.getEntryCount(this)
         showCalendarDivider = AppRepository.getShowCalendarDivider(this)
         blackWallpaperEnabled = AppRepository.isBlackWallpaperEnabled(this)
-        useMonospaceFont = AppRepository.useMonospaceFont(this)
+        useMonospaceFont = NinePrefs.useMonospaceFont(this)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -454,7 +457,7 @@ class SettingsActivity : Activity() {
             }
             ROW_MONOSPACE_FONT -> {
                 useMonospaceFont = !useMonospaceFont
-                AppRepository.setUseMonospaceFont(this, useMonospaceFont)
+                NinePrefs.setUseMonospaceFont(this, useMonospaceFont)
                 // The theme's default TextView style only applies to views created after it's
                 // set, so this screen needs to be rebuilt for the change to show immediately.
                 recreate()
