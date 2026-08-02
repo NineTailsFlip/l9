@@ -20,6 +20,7 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import life.furrer.nine.core.manual.ManualActivity
 import life.furrer.nine.core.prefs.NinePrefs
 import life.furrer.nine.core.ui.Palette
 import life.furrer.nine.core.ui.applyConfiguredTheme
@@ -331,7 +332,7 @@ class SettingsActivity : Activity() {
     }
 
     private fun openManual(page: String) {
-        startActivity(Intent(this, ManualActivity::class.java).putExtra(ManualActivity.EXTRA_PAGE, page))
+        startActivity(ManualActivity.intentFor(this, page))
     }
 
     private fun openWebsite() {
