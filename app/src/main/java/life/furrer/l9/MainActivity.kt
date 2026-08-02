@@ -1,7 +1,6 @@
 package life.furrer.l9
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -13,7 +12,6 @@ import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.InputType
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.TextUtils
@@ -23,7 +21,7 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextClock
@@ -35,9 +33,10 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
+import life.furrer.nine.core.ui.MenuItem
+import life.furrer.nine.core.ui.MenuSheet
 import life.furrer.nine.core.ui.Palette
 import life.furrer.nine.core.ui.applyConfiguredTheme
-import life.furrer.nine.core.ui.dialogThemeResId
 import life.furrer.nine.core.ui.hideStatusBar
 import life.furrer.nine.core.ui.recreateIfFontChanged
 import life.furrer.nine.core.util.KeyRouter
@@ -51,11 +50,11 @@ private const val ROW_SIDE_PADDING = 28
 private const val DIVIDER_GREY = 0xFF333333.toInt()
 private const val SPEED_DIAL_WARNING_DELAY_MS = 2000L
 private const val SPEED_DIAL_CALL_DELAY_MS = 3000L
-private const val STAR_SEQUENCE_TIMEOUT_MS = 500L
 
-/** The home screen's own key vocabulary — Star means "reorder toggle" and digit 0 means "browse
- *  all" here, neither of which is universal key routing, just what this screen does with those
- *  keys. Translated from core's [NineAction] rather than duplicating [KeyRouter]'s keycode
+/** The home screen's own key vocabulary — Star means "exit reorder mode" while reordering (its
+ *  menu-opening meaning otherwise lives outside this mapping, see onKeyUp) and digit 0 means
+ *  "browse all" here, neither of which is universal key routing, just what this screen does with
+ *  those keys. Translated from core's [NineAction] rather than duplicating [KeyRouter]'s keycode
  *  matching. */
 private sealed interface Action {
     data object Up : Action
@@ -92,14 +91,12 @@ class MainActivity : Activity() {
     private var reorderModeActive = false
     private var appliedMonospaceFont = false
 
-    // Star key: bare tap alone does nothing. Tap then '#' enters reorder mode; tap then '0'
-    // opens the picker to (re)assign the current slot; tap twice renames; long-press jumps into
-    // Settings. See handleStarShortTap and onKeyDown's starTapArmed handling.
+    // Star key: short tap opens menuSheet (Link app/Rename/Reorder/Settings); long-press jumps
+    // straight into Settings instead. Tracked the same "start on DOWN, decide on UP unless the
+    // long-press already fired" way as the side keys below.
     private var pendingStarKeyCode: Int? = null
     private var starLongPressHandled = false
-    private var starTapArmed = false
-    private val starSequenceHandler = Handler(Looper.getMainLooper())
-    private var starSequenceTimeoutRunnable: Runnable? = null
+    private lateinit var menuSheet: MenuSheet
     private lateinit var rowContainer: LinearLayout
     private lateinit var scrollView: ScrollView
     private lateinit var clockView: TextClock
@@ -166,7 +163,7 @@ class MainActivity : Activity() {
             descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
         }
 
-        val root = LinearLayout(this).apply {
+        val mainColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(header)
             addView(calendarContainer)
@@ -177,6 +174,11 @@ class MainActivity : Activity() {
                 },
             )
             addView(scrollView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        }
+        menuSheet = MenuSheet(this)
+        val root = FrameLayout(this).apply {
+            addView(mainColumn, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            addView(menuSheet, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
         setContentView(root)
         hideStatusBar()
@@ -289,8 +291,6 @@ class MainActivity : Activity() {
         // stray key-up on resume can't be mistaken for a real press we witnessed.
         pendingSideKeyCode = null
         pendingStarKeyCode = null
-        cancelStarSequenceTimeout()
-        starTapArmed = false
     }
 
     private fun registerBatteryReceiver() {
@@ -425,28 +425,9 @@ class MainActivity : Activity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (menuSheet.handleKeyDown(keyCode, event)) return true
         if (reorderModeActive) {
             return handleReorderKeyDown(keyCode, event)
-        }
-        // '*' followed by '#' enters reorder mode; '*' followed by '0' opens the picker to
-        // (re)assign the current slot's app — takes priority over both digit-0's speed dial and
-        // its normal BrowseAll meaning, since arming '*' is a deliberate command prefix.
-        if (starTapArmed && event.repeatCount == 0) {
-            when (keyCode) {
-                KeyEvent.KEYCODE_POUND -> {
-                    cancelStarSequenceTimeout()
-                    starTapArmed = false
-                    reorderModeActive = true
-                    render()
-                    return true
-                }
-                KeyEvent.KEYCODE_0 -> {
-                    cancelStarSequenceTimeout()
-                    starTapArmed = false
-                    openPickerForSlot(selectedIndex)
-                    return true
-                }
-            }
         }
         val speedDialDigit = digitFor(keyCode, event)
         if (speedDialDigit != null) {
@@ -472,8 +453,9 @@ class MainActivity : Activity() {
             }
         }
         if (keyCode == KeyEvent.KEYCODE_STAR) {
-            // Deferred to onKeyUp/onKeyLongPress: a bare tap alone does nothing (see
-            // handleStarShortTap), so short-press behavior can't be decided on key-down.
+            // Deferred to onKeyUp/onKeyLongPress: a bare tap opens the menu, but only once we
+            // know it wasn't actually a long-press for Settings, so short-press behavior can't be
+            // decided on key-down.
             event.startTracking()
             pendingStarKeyCode = keyCode
             return true
@@ -580,7 +562,7 @@ class MainActivity : Activity() {
             // key-up can otherwise arrive here for a press this activity never saw start (see
             // onPause for the general explanation of this class of race).
             if (pendingStarKeyCode == keyCode && !starLongPressHandled) {
-                handleStarShortTap()
+                openMenu()
             }
             starLongPressHandled = false
             pendingStarKeyCode = null
@@ -640,8 +622,6 @@ class MainActivity : Activity() {
     override fun onKeyLongPress(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_STAR) {
             starLongPressHandled = true
-            cancelStarSequenceTimeout()
-            starTapArmed = false
             startActivity(Intent(this, SettingsActivity::class.java))
             return true
         }
@@ -654,56 +634,35 @@ class MainActivity : Activity() {
         return super.onKeyLongPress(keyCode, event)
     }
 
-    /** First '*' tap arms a short window for a follow-up (see onKeyDown's starTapArmed handling
-     *  for '#'/'0'); a second '*' tap within it renames the selected slot instead. */
-    private fun handleStarShortTap() {
-        if (starTapArmed) {
-            cancelStarSequenceTimeout()
-            starTapArmed = false
-            onRenameRequested(selectedIndex)
-        } else {
-            starTapArmed = true
-            val timeout = Runnable {
-                starTapArmed = false
-                starSequenceTimeoutRunnable = null
-            }
-            starSequenceTimeoutRunnable = timeout
-            starSequenceHandler.postDelayed(timeout, STAR_SEQUENCE_TIMEOUT_MS)
+    /** Numbers only the actions that apply to the currently selected slot — an empty slot has
+     *  nothing to rename, so that item drops out rather than acting on nothing. Reorder mode is
+     *  only ever entered from here (this menu can't itself be open while reorderModeActive, since
+     *  onKeyDown routes star straight to [handleReorderKeyDown] instead while reordering), so this
+     *  item's label never needs a "stop reordering" alternative. */
+    private fun openMenu() {
+        val items = mutableListOf<MenuItem>()
+        items += MenuItem("Link app") { openPickerForSlot(selectedIndex) }
+        if (slots.getOrNull(selectedIndex) != null) {
+            items += MenuItem("Rename") { onRenameRequested(selectedIndex) }
         }
+        items += MenuItem("Reorder") {
+            reorderModeActive = true
+            render()
+        }
+        items += MenuItem("Settings") { startActivity(Intent(this, SettingsActivity::class.java)) }
+        menuSheet.show(items)
     }
 
-    private fun cancelStarSequenceTimeout() {
-        starSequenceTimeoutRunnable?.let { starSequenceHandler.removeCallbacks(it) }
-        starSequenceTimeoutRunnable = null
-    }
-
+    /** Renames the app globally (by package/activity, via [AppRepository.setCustomLabel]) rather
+     *  than just this slot, so the new label also shows up in any other slot, side key, or Browse
+     *  all row referencing the same app. */
     private fun onRenameRequested(index: Int) {
         val entry = slots.getOrNull(index) ?: return
-        val builder = AlertDialog.Builder(this, dialogThemeResId())
-        // Built from the dialog's own themed context (not the activity's) so the EditText's
-        // cursor/underline picks up the dialog theme's white accent instead of the activity
-        // theme's default one.
-        val input = EditText(builder.context).apply {
-            inputType = InputType.TYPE_CLASS_TEXT or
-                InputType.TYPE_TEXT_VARIATION_FILTER or
-                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-            setSingleLine()
-            setText(entry.displayLabel)
-            setSelection(text.length)
+        showRenameDialog(entry.displayLabel) { newLabel ->
+            AppRepository.setCustomLabel(this, entry.packageName, entry.activityName, newLabel)
+            slots = AppRepository.loadSlots(this)
+            render()
         }
-        builder
-            .setTitle("Rename")
-            .setView(input)
-            .setPositiveButton("Save") { _, _ ->
-                val newLabel = input.text.toString().trim()
-                val updated = slots.toMutableList()
-                updated[index] = entry.copy(customLabel = newLabel.ifEmpty { null })
-                slots = updated
-                AppRepository.saveSlots(this, slots)
-                render()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
     }
 
     private fun onSelect(index: Int) {
@@ -775,8 +734,11 @@ class MainActivity : Activity() {
                 PendingTarget.SLOT -> if (pendingSlotIndex >= 0) {
                     val updated = slots.toMutableList()
                     updated[pendingSlotIndex] = entry
-                    slots = updated
-                    AppRepository.saveSlots(this, slots)
+                    AppRepository.saveSlots(this, updated)
+                    // Reloaded rather than just using `updated` directly so a freshly linked app
+                    // that already has a global rename/hidden override picks it up immediately,
+                    // the same as AppPickerActivity's own list already does.
+                    slots = AppRepository.loadSlots(this)
                     render()
                 }
                 PendingTarget.LEFT -> AppRepository.setLeftApp(this, entry)

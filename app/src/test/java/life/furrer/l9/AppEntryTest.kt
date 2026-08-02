@@ -1,6 +1,7 @@
 package life.furrer.l9
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -10,27 +11,28 @@ import org.robolectric.RobolectricTestRunner
 class AppEntryTest {
 
     @Test
-    fun `round trips through json including a custom label`() {
+    fun `round trips through json`() {
         val entry = AppEntry(
             packageName = "com.example.app",
             activityName = "com.example.app.MainActivity",
             label = "Example",
-            customLabel = "My Example",
         )
         val restored = AppEntry.fromJson(entry.toJson())
         assertEquals(entry, restored)
     }
 
     @Test
-    fun `round trips through json without a custom label`() {
+    fun `customLabel and hidden are never part of the json - they're resolved from AppRepository's override store instead`() {
         val entry = AppEntry(
             packageName = "com.example.app",
             activityName = "com.example.app.MainActivity",
             label = "Example",
+            customLabel = "My Example",
+            hidden = true,
         )
         val restored = AppEntry.fromJson(entry.toJson())
-        assertEquals(entry, restored)
         assertNull(restored.customLabel)
+        assertFalse(restored.hidden)
     }
 
     @Test
@@ -43,17 +45,5 @@ class AppEntryTest {
     fun `displayLabel prefers the custom label when set`() {
         val entry = AppEntry("pkg", "activity", label = "Original", customLabel = "Renamed")
         assertEquals("Renamed", entry.displayLabel)
-    }
-
-    @Test
-    fun `an empty custom label in json is treated as absent`() {
-        // AppRepository never writes an empty customLabel (MainActivity.onRenameRequested maps
-        // blank input back to null before saving), but fromJson must still be defensive since it
-        // also drives core's Backup import path, which trusts whatever the file contains.
-        val obj = AppEntry("pkg", "activity", label = "Original").toJson()
-        obj.put("customLabel", "")
-        val restored = AppEntry.fromJson(obj)
-        assertNull(restored.customLabel)
-        assertEquals("Original", restored.displayLabel)
     }
 }

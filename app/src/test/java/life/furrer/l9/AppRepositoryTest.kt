@@ -55,12 +55,62 @@ class AppRepositoryTest {
     @Test
     fun `saved slots round trip, preserving empty slots and order`() {
         val entryA = AppEntry("a.pkg", "a.Activity", "App A")
-        val entryB = AppEntry("b.pkg", "b.Activity", "App B", customLabel = "B custom")
+        val entryB = AppEntry("b.pkg", "b.Activity", "App B")
         AppRepository.setSlotCount(context, 4)
         AppRepository.saveSlots(context, listOf(entryA, null, entryB, null))
 
         val reloaded = AppRepository.loadSlots(context)
         assertEquals(listOf(entryA, null, entryB, null), reloaded)
+    }
+
+    @Test
+    fun `renaming an app applies to every slot referencing it, not just the one it was renamed from`() {
+        val entryB = AppEntry("b.pkg", "b.Activity", "App B")
+        AppRepository.setSlotCount(context, 2)
+        AppRepository.saveSlots(context, listOf(entryB, entryB))
+
+        AppRepository.setCustomLabel(context, "b.pkg", "b.Activity", "B custom")
+
+        val reloaded = AppRepository.loadSlots(context)
+        assertEquals("B custom", reloaded[0]?.displayLabel)
+        assertEquals("B custom", reloaded[1]?.displayLabel)
+    }
+
+    @Test
+    fun `clearing a custom label reverts display back to the app's own label`() {
+        val entryA = AppEntry("a.pkg", "a.Activity", "App A")
+        AppRepository.setSlotCount(context, 1)
+        AppRepository.saveSlots(context, listOf(entryA))
+        AppRepository.setCustomLabel(context, "a.pkg", "a.Activity", "Renamed")
+
+        AppRepository.setCustomLabel(context, "a.pkg", "a.Activity", null)
+
+        assertEquals("App A", AppRepository.loadSlots(context)[0]?.displayLabel)
+    }
+
+    @Test
+    fun `hiding an app is reflected on any slot entry for it too`() {
+        val entryA = AppEntry("a.pkg", "a.Activity", "App A")
+        AppRepository.setSlotCount(context, 1)
+        AppRepository.saveSlots(context, listOf(entryA))
+
+        AppRepository.setHidden(context, "a.pkg", "a.Activity", true)
+
+        assertEquals(true, AppRepository.loadSlots(context)[0]?.hidden)
+    }
+
+    @Test
+    fun `overrides for unrelated apps don't leak onto other slots`() {
+        val entryA = AppEntry("a.pkg", "a.Activity", "App A")
+        val entryB = AppEntry("b.pkg", "b.Activity", "App B")
+        AppRepository.setSlotCount(context, 2)
+        AppRepository.saveSlots(context, listOf(entryA, entryB))
+
+        AppRepository.setCustomLabel(context, "a.pkg", "a.Activity", "A custom")
+
+        val reloaded = AppRepository.loadSlots(context)
+        assertEquals("A custom", reloaded[0]?.displayLabel)
+        assertEquals("App B", reloaded[1]?.displayLabel)
     }
 
     @Test

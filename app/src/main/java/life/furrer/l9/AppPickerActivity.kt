@@ -5,27 +5,29 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Paint
 import android.os.Bundle
-import android.text.Editable
-import android.text.InputType
-import android.text.TextWatcher
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import life.furrer.nine.core.ui.MenuItem
+import life.furrer.nine.core.ui.MenuSheet
 import life.furrer.nine.core.ui.Palette
+import life.furrer.nine.core.ui.SearchField
 import life.furrer.nine.core.ui.applyConfiguredTheme
 import life.furrer.nine.core.ui.hideStatusBar
 import life.furrer.nine.core.util.KeyRouter
 import life.furrer.nine.core.util.NineAction
 
 private const val DIVIDER_GREY = 0xFF333333.toInt()
-private const val LEAKED_CHAR_WINDOW_MS = 900L
 private const val ROW_SIDE_PADDING = 28
 
+/** `*` isn't included here — it's handled by its own dedicated block in dispatchKeyEvent, ahead
+ *  of [SearchField.handleKeyEvent], the same shape ContactsActivity's star handling already
+ *  uses. */
 private val RESERVED_NAV_KEYS = setOf(
     KeyEvent.KEYCODE_DPAD_UP,
     KeyEvent.KEYCODE_DPAD_DOWN,
@@ -43,31 +45,35 @@ class AppPickerActivity : Activity() {
 
     private var apps: List<AppEntry> = emptyList()
     private var visibleApps: List<AppEntry> = emptyList()
-    private var searchText: String = ""
     private var selectedIndex: Int = 0
     private var launchDirectly: Boolean = false
     private var allowClear: Boolean = false
+    // Not persisted — resets to false every time this screen opens fresh, since showing hidden
+    // apps is an occasional maintenance action rather than a view mode worth remembering.
+    private var showHidden: Boolean = false
     private lateinit var rowContainer: LinearLayout
     private lateinit var scrollView: ScrollView
-    private lateinit var searchInput: EditText
+    private lateinit var searchField: SearchField
     private lateinit var noMatchesLabel: TextView
+    private lateinit var menuSheet: MenuSheet
     /** rows[0] is a pseudo-entry ("L9 Settings" or "Clear this slot") when [launchDirectly] or
      *  [allowClear]; the rest line up 1:1 with [visibleApps]. */
     private val rows = mutableListOf<TextView>()
+    /** Parallel to [rows] — a hidden app is dimmed further than an ordinary unselected row
+     *  instead of being labelled, so "show hidden apps" reads as a visual demotion rather than a
+     *  wall of "· hidden" suffixes. */
+    private val rowIsHidden = mutableListOf<Boolean>()
 
-    /** Guards against the key-up of whichever press opened this screen (e.g. "0" for browse-all)
-     *  leaking in after our EditText already has focus — see onPause/dispatchKeyEvent. */
+    /** Tracks `*`'s own down-then-up — it has no long-press meaning here, unlike MainActivity's
+     *  star key, so a plain seen-down check is enough. Separate from [SearchField]'s own internal
+     *  tracking, since `*` is handled before ever reaching it (see dispatchKeyEvent). */
     private val seenKeyDowns = mutableSetOf<Int>()
 
-    // The IME (a hardware T9 predictive keyboard) processes key presses independently of our
-    // Activity's own key dispatch — confirmed via logcat, a real single tap of "0" that opens
-    // this screen still shows up as a committed character ~300-450ms later, well after our own
-    // dispatchKeyEvent never even saw it. It's the IME finishing composing a key it captured
-    // before our EditText existed and committing it to whichever input connection appears next.
-    // We can't intercept that at the key-event level, so instead we discard the first text
-    // change if it lands suspiciously soon after this screen gained focus.
-    private var focusGainedAtMillis: Long = 0
-    private var firstTextChangeHandled = false
+    // Selecting a menu item via OK/a digit closes the sheet as a side effect of handling that same
+    // key's ACTION_DOWN (see the `menuSheet.isShowing` branch in dispatchKeyEvent) — so the
+    // matching ACTION_UP must be swallowed here too, the same shape as ContactsActivity's own
+    // menuConsumedKeyUp.
+    private var menuConsumedKeyUp: Int? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,48 +81,33 @@ class AppPickerActivity : Activity() {
 
         launchDirectly = intent.getBooleanExtra(EXTRA_LAUNCH_DIRECTLY, false)
         allowClear = intent.getBooleanExtra(EXTRA_ALLOW_CLEAR, false)
-        apps = AppRepository.queryInstalledApps(this)
+        apps = AppRepository.queryInstalledApps(this, includeHidden = showHidden)
 
-        val outer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-
-        // Real EditText so the device's active input method (a T9/multi-tap IME on this hardware)
-        // handles predictive/multi-tap text entry itself, same as any other app's text field —
-        // we don't reimplement multi-tap logic ourselves.
-        searchInput = EditText(this).apply {
-            inputType = InputType.TYPE_CLASS_TEXT or
-                InputType.TYPE_TEXT_VARIATION_FILTER or
-                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-            setSingleLine()
-            background = null
-            // Not focusable until the first real T9 key press (see dispatchKeyEvent) — a lone
-            // focusable view in a new window gets auto-focused by Android otherwise, which would
-            // establish an IME connection immediately and let the key that opened this screen
-            // leak a composed character into it.
-            isFocusable = false
-            isFocusableInTouchMode = false
-            textSize = 16f
-            setTextColor(Color.WHITE)
-            setHintTextColor(Palette.GRAY_DIM)
-            hint = "Type to search"
-            setPadding(ROW_SIDE_PADDING, 20, ROW_SIDE_PADDING, 10)
-            addTextChangedListener(object : TextWatcher {
-                override fun afterTextChanged(s: Editable?) {
-                    if (!firstTextChangeHandled) {
-                        firstTextChangeHandled = true
-                        val sinceFocus = System.currentTimeMillis() - focusGainedAtMillis
-                        if (!s.isNullOrEmpty() && sinceFocus < LEAKED_CHAR_WINDOW_MS) {
-                            s.clear()
-                            return
-                        }
-                    }
-                    searchText = s?.toString() ?: ""
-                    rebuildRows()
-                }
-                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            })
+        searchField = SearchField(this).apply {
+            onQueryChanged = { rebuildRows() }
+            // finish()+a fresh startActivity is the only thing confirmed to release this
+            // device's T9 IME's grip on `*` once the search field has taken real focus (see
+            // SearchField.onDeactivated's own doc comment) — but that would silently cancel the
+            // link picker's pending activity-for-result contract (MainActivity would see a
+            // RESULT_CANCELED the moment the user backspaced their query to empty, not just when
+            // they actually backed out). Browse all is a plain startActivity with no result owed
+            // to anyone, so it's the only mode that gets the fresh-window recovery; the link
+            // picker keeps the same "clear the search before using `*`" limit ContactsActivity
+            // already has elsewhere.
+            onDeactivated = { if (launchDirectly) restartFresh() }
+            editText.apply {
+                textSize = 16f
+                setTextColor(Color.WHITE)
+                setHintTextColor(Palette.GRAY_DIM)
+                hint = "Type to search"
+                setPadding(ROW_SIDE_PADDING, 20, ROW_SIDE_PADDING, 10)
+            }
         }
-        outer.addView(searchInput)
+
+        val outer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(searchField.editText)
+        }
 
         noMatchesLabel = TextView(this).apply {
             text = "No matches"
@@ -136,7 +127,12 @@ class AppPickerActivity : Activity() {
         }
         outer.addView(scrollView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
-        setContentView(outer)
+        menuSheet = MenuSheet(this)
+        val root = FrameLayout(this).apply {
+            addView(outer, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            addView(menuSheet, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        }
+        setContentView(root)
         hideStatusBar()
 
         rebuildRows()
@@ -145,20 +141,33 @@ class AppPickerActivity : Activity() {
     override fun onPause() {
         super.onPause()
         seenKeyDowns.clear()
+        searchField.onPause()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
-            focusGainedAtMillis = System.currentTimeMillis()
+            searchField.onWindowFocusGained()
             hideStatusBar()
         }
     }
 
+    /** Not a visible flicker (overridePendingTransition(0, 0) on both ends) — see
+     *  [SearchField.onDeactivated]'s own doc comment for why an in-place recreate() or just
+     *  clearing view focus don't work, confirmed on-device, and only a genuinely fresh
+     *  Activity/window does. */
+    private fun restartFresh() {
+        finish()
+        overridePendingTransition(0, 0)
+        startActivity(Intent(this, AppPickerActivity::class.java).putExtra(EXTRA_LAUNCH_DIRECTLY, true))
+        overridePendingTransition(0, 0)
+    }
+
     private fun rebuildRows() {
-        visibleApps = apps.filter { matchesSearch(it.displayLabel, searchText) }
+        visibleApps = apps.filter { matchesSearch(it.displayLabel, searchField.query) }
         rowContainer.removeAllViews()
         rows.clear()
+        rowIsHidden.clear()
 
         if (launchDirectly) {
             addPseudoRow("L9 Settings")
@@ -173,10 +182,11 @@ class AppPickerActivity : Activity() {
                 setPadding(ROW_SIDE_PADDING, 3, ROW_SIDE_PADDING, 3)
             }
             rows.add(row)
+            rowIsHidden.add(entry.hidden)
             rowContainer.addView(row)
         }
 
-        noMatchesLabel.visibility = if (searchText.isNotEmpty() && visibleApps.isEmpty()) View.VISIBLE else View.GONE
+        noMatchesLabel.visibility = if (searchField.query.isNotEmpty() && visibleApps.isEmpty()) View.VISIBLE else View.GONE
 
         selectedIndex = selectedIndex.coerceIn(0, (rows.size - 1).coerceAtLeast(0))
         render()
@@ -189,6 +199,7 @@ class AppPickerActivity : Activity() {
             setPadding(ROW_SIDE_PADDING, 3, ROW_SIDE_PADDING, 3)
         }
         rows.add(row)
+        rowIsHidden.add(false)
         rowContainer.addView(row)
 
         val divider = View(this).apply { setBackgroundColor(DIVIDER_GREY) }
@@ -203,7 +214,13 @@ class AppPickerActivity : Activity() {
     private fun render() {
         rows.forEachIndexed { index, row ->
             val selected = index == selectedIndex
-            row.setTextColor(if (selected) Color.WHITE else Palette.GRAY_DIM)
+            row.setTextColor(
+                when {
+                    selected -> Color.WHITE
+                    rowIsHidden.getOrNull(index) == true -> Palette.GRAY_FAINT
+                    else -> Palette.GRAY_DIM
+                },
+            )
             row.paintFlags = if (selected) {
                 row.paintFlags or Paint.UNDERLINE_TEXT_FLAG
             } else {
@@ -215,15 +232,20 @@ class AppPickerActivity : Activity() {
         }
     }
 
-    /** Up/Down/Select always drive our own list navigation, never the text field — a single-line
-     *  search box has no use for them, and the field stays unfocused/inert until a real T9 key is
-     *  pressed. Everything else (digits, etc.) focuses the field on first press, then falls
-     *  through to the normal view dispatch so the EditText and its IME see it exactly like any
-     *  other app would. Back is given to the IME first (so it can clear composing text), and only
-     *  cancels this screen if the IME didn't consume it. */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (menuSheet.isShowing) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                menuSheet.handleKeyDown(event.keyCode, event)
+                menuConsumedKeyUp = event.keyCode
+            }
+            return true
+        }
+        if (event.action == KeyEvent.ACTION_UP && event.keyCode == menuConsumedKeyUp) {
+            menuConsumedKeyUp = null
+            return true
+        }
         if (event.keyCode == KeyEvent.KEYCODE_BACK) {
-            if (super.dispatchKeyEvent(event)) return true
+            if (searchField.handleBack(event) { super.dispatchKeyEvent(it) }) return true
             if (event.action == KeyEvent.ACTION_DOWN) {
                 setResult(RESULT_CANCELED)
                 finish()
@@ -231,8 +253,25 @@ class AppPickerActivity : Activity() {
             return true
         }
 
-        if (event.keyCode in RESERVED_NAV_KEYS) {
-            if (event.action == KeyEvent.ACTION_DOWN) {
+        // `*` opens the rename/hide/show-hidden menu on whichever row is selected — reserved
+        // ahead of the search field/IME. Confirmed on-device (same quirk as ContactsActivity's
+        // own identical comment): once the field has taken real IME focus, this device's
+        // hardware T9 IME swallows both `*` and `#` for its own mode-cycling before either ever
+        // reaches dispatchKeyEvent, and long-press-OK isn't a usable fallback either — confirmed
+        // on-device that a long press there is claimed at the system level for the physical
+        // call/send button (opens P9 via the CALL_BUTTON intent instead of ever reaching this
+        // Activity). [SearchField.onDeactivated] (see restartFresh) is what actually restores
+        // `*`, once the search goes back to empty.
+        if (event.keyCode == KeyEvent.KEYCODE_STAR) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> seenKeyDowns.add(event.keyCode)
+                KeyEvent.ACTION_UP -> if (seenKeyDowns.remove(event.keyCode)) openMenu()
+            }
+            return true
+        }
+
+        if (searchField.handleKeyEvent(event, RESERVED_NAV_KEYS)) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.keyCode in RESERVED_NAV_KEYS) {
                 when (KeyRouter.map(event.keyCode, event.number)) {
                     NineAction.Up -> moveSelection(-1)
                     NineAction.Down -> moveSelection(1)
@@ -243,23 +282,6 @@ class AppPickerActivity : Activity() {
             return true
         }
 
-        // Any other key (digits, *, #, ...): only forward it if we actually saw the matching
-        // key-down ourselves. A key-up here without one means the press started before this
-        // screen existed (e.g. the "0" that opened browse-all) and must not reach the IME.
-        when (event.action) {
-            KeyEvent.ACTION_DOWN -> {
-                seenKeyDowns.add(event.keyCode)
-                // Only a genuine T9 key (never a reserved nav key, handled above) activates the
-                // search field — it stays unfocused/inert while the user is just browsing.
-                if (!searchInput.isFocusable) {
-                    searchInput.isFocusable = true
-                    searchInput.isFocusableInTouchMode = true
-                    searchInput.requestFocus()
-                }
-            }
-            KeyEvent.ACTION_UP -> if (!seenKeyDowns.remove(event.keyCode)) return true
-        }
-
         return super.dispatchKeyEvent(event)
     }
 
@@ -267,6 +289,16 @@ class AppPickerActivity : Activity() {
         if (rows.isEmpty()) return
         selectedIndex = (selectedIndex + direction + rows.size) % rows.size
         render()
+    }
+
+    /** null both when nothing is selected and when the selected row is the pseudo-row ("L9
+     *  Settings"/"Clear this slot") rather than a real app — callers that only care about acting
+     *  on an app (like the `*` menu) can treat both the same way. */
+    private fun selectedAppOrNull(): AppEntry? {
+        val hasPseudoRow = launchDirectly || allowClear
+        if (hasPseudoRow && selectedIndex == 0) return null
+        val appIndex = if (hasPseudoRow) selectedIndex - 1 else selectedIndex
+        return visibleApps.getOrNull(appIndex)
     }
 
     private fun confirmSelection() {
@@ -280,8 +312,7 @@ class AppPickerActivity : Activity() {
             finish()
             return
         }
-        val appIndex = if (launchDirectly || allowClear) selectedIndex - 1 else selectedIndex
-        val entry = visibleApps.getOrNull(appIndex) ?: return
+        val entry = selectedAppOrNull() ?: return
         if (launchDirectly) {
             if (AppRepository.launchApp(this, entry)) {
                 finish()
@@ -297,6 +328,47 @@ class AppPickerActivity : Activity() {
         }
         setResult(RESULT_OK, data)
         finish()
+    }
+
+    /** Rename/hide act on the selected app (see [selectedAppOrNull]); "show hidden" is always
+     *  offered regardless of selection. Renaming and hiding both go through AppRepository's
+     *  package-keyed override, so they apply everywhere the app shows up (slots, side keys, this
+     *  same list next time), not just this row. */
+    private fun openMenu() {
+        val items = mutableListOf<MenuItem>()
+        val selected = selectedAppOrNull()
+        if (selected != null) {
+            items += MenuItem("Rename") { onRenameRequested(selected) }
+            items += if (selected.hidden) {
+                MenuItem("Unhide") { setHidden(selected, false) }
+            } else {
+                MenuItem("Hide") { setHidden(selected, true) }
+            }
+        }
+        items += MenuItem(if (showHidden) "Hide hidden apps" else "Show hidden apps") { toggleShowHidden() }
+        menuSheet.show(items)
+    }
+
+    private fun onRenameRequested(entry: AppEntry) {
+        showRenameDialog(entry.displayLabel) { newLabel ->
+            AppRepository.setCustomLabel(this, entry.packageName, entry.activityName, newLabel)
+            refreshApps()
+        }
+    }
+
+    private fun setHidden(entry: AppEntry, hidden: Boolean) {
+        AppRepository.setHidden(this, entry.packageName, entry.activityName, hidden)
+        refreshApps()
+    }
+
+    private fun toggleShowHidden() {
+        showHidden = !showHidden
+        refreshApps()
+    }
+
+    private fun refreshApps() {
+        apps = AppRepository.queryInstalledApps(this, includeHidden = showHidden)
+        rebuildRows()
     }
 
     companion object {

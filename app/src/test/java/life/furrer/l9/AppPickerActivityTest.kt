@@ -3,14 +3,20 @@ package life.furrer.l9
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.ResolveInfo
+import android.graphics.Color
 import android.view.KeyEvent
 import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import life.furrer.nine.core.ui.MenuSheet
+import life.furrer.nine.core.ui.Palette
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -62,10 +68,40 @@ class AppPickerActivityTest {
         return Robolectric.buildActivity(AppPickerActivity::class.java, intent).setup().get()
     }
 
+    private fun rootOf(activity: AppPickerActivity): FrameLayout =
+        activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0) as FrameLayout
+
     private fun searchInputOf(activity: AppPickerActivity): EditText {
-        val content = activity.findViewById<ViewGroup>(android.R.id.content)
-        val outer = content.getChildAt(0) as LinearLayout
+        val outer = rootOf(activity).getChildAt(0) as LinearLayout
         return outer.getChildAt(0) as EditText
+    }
+
+    private fun menuSheetOf(activity: AppPickerActivity): MenuSheet =
+        rootOf(activity).getChildAt(1) as MenuSheet
+
+    private fun menuLabels(menuSheet: MenuSheet): List<String> {
+        val column = menuSheet.getChildAt(0) as LinearLayout
+        val listContainer = column.getChildAt(1) as LinearLayout
+        return (0 until listContainer.childCount).map { (listContainer.getChildAt(it) as TextView).text.toString() }
+    }
+
+    private fun tapStar(activity: AppPickerActivity) {
+        activity.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_STAR, 0))
+        activity.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_STAR, 0))
+    }
+
+    /** A short OK tap — down immediately followed by up, well under the long-press timeout —
+     *  confirms the selection, same as a real quick press. */
+    private fun tapOk(activity: AppPickerActivity) {
+        activity.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        activity.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+    }
+
+    /** Chooses menu item [n] (1-based, matching the on-screen numbering) the same way a real
+     *  digit key press does — down only, since MenuSheet acts on ACTION_DOWN. */
+    private fun chooseMenuItem(activity: AppPickerActivity, n: Int) {
+        val keyCode = KeyEvent.KEYCODE_0 + n
+        activity.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, keyCode, 0))
     }
 
     /** Sets the search text. The activity discards the very first text change if it lands right
@@ -78,16 +114,20 @@ class AppPickerActivityTest {
         input.setText(query)
     }
 
-    private fun visibleRowLabels(activity: AppPickerActivity): List<String> {
-        val content = activity.findViewById<ViewGroup>(android.R.id.content)
-        val outer = content.getChildAt(0) as LinearLayout
+    private fun visibleRows(activity: AppPickerActivity): List<TextView> {
+        val outer = rootOf(activity).getChildAt(0) as LinearLayout
         val scrollView = outer.getChildAt(2) as ScrollView
         val rowContainer = scrollView.getChildAt(0) as LinearLayout
         return (0 until rowContainer.childCount)
             .map { rowContainer.getChildAt(it) }
             .filterIsInstance<TextView>()
-            .map { it.text.toString() }
     }
+
+    private fun visibleRowLabels(activity: AppPickerActivity): List<String> =
+        visibleRows(activity).map { it.text.toString() }
+
+    private fun rowTextColors(activity: AppPickerActivity): List<Int> =
+        visibleRows(activity).map { it.currentTextColor }
 
     @Test
     fun `with no search text every installed app is listed alphabetically`() {
@@ -116,7 +156,7 @@ class AppPickerActivityTest {
     fun `confirming the only search match returns that app`() {
         val activity = buildActivity()
         typeSearch(activity, "gam")
-        activity.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        tapOk(activity)
 
         val result = shadowOf(activity).resultIntent
         assertEquals("com.example.gamma", result?.getStringExtra(AppPickerActivity.EXTRA_PACKAGE_NAME))
@@ -128,7 +168,7 @@ class AppPickerActivityTest {
         val activity = buildActivity(launchDirectly = true)
         // Row 0 is the "L9 Settings" pseudo-row, so move down once to reach the first real app.
         activity.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN, 0))
-        activity.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        tapOk(activity)
 
         val started = shadowOf(activity).nextStartedActivity
         assertEquals("com.example.alpha", started.component?.packageName)
@@ -137,7 +177,7 @@ class AppPickerActivityTest {
     @Test
     fun `launch-directly mode opens Settings when the pseudo-row itself is confirmed`() {
         val activity = buildActivity(launchDirectly = true)
-        activity.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        tapOk(activity)
 
         val started = shadowOf(activity).nextStartedActivity
         assertEquals(SettingsActivity::class.java.name, started.component?.className)
@@ -146,7 +186,7 @@ class AppPickerActivityTest {
     @Test
     fun `allow-clear mode returns a clear result when its pseudo-row is confirmed`() {
         val activity = buildActivity(allowClear = true)
-        activity.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+        tapOk(activity)
 
         val result = shadowOf(activity).resultIntent
         assertEquals(true, result?.getBooleanExtra(AppPickerActivity.EXTRA_CLEAR, false))
@@ -160,5 +200,86 @@ class AppPickerActivityTest {
 
         assertEquals(android.app.Activity.RESULT_CANCELED, shadowOf(activity).resultCode)
         assertNull(shadowOf(activity).nextStartedActivity)
+    }
+
+    @Test
+    fun `star opens a menu offering Rename, Hide and the show-hidden toggle`() {
+        val activity = buildActivity()
+        tapStar(activity)
+
+        assertEquals(listOf("1 Rename", "2 Hide", "3 Show hidden apps"), menuLabels(menuSheetOf(activity)))
+    }
+
+    @Test
+    fun `hiding an app via the menu drops it from the list`() {
+        val activity = buildActivity()
+        tapStar(activity)
+        chooseMenuItem(activity, 2) // Hide (selected row is Alpha, the first one)
+
+        assertEquals(listOf("Beta Two", "Gamma"), visibleRowLabels(activity))
+    }
+
+    @Test
+    fun `show hidden apps reveals a hidden app with its label unchanged but dimmed further, and unhide restores it`() {
+        val activity = buildActivity()
+        tapStar(activity)
+        chooseMenuItem(activity, 2) // Hide Alpha
+        tapStar(activity)
+        chooseMenuItem(activity, 3) // Show hidden apps
+
+        // Labels never gain a "hidden" suffix — the row is just dimmed instead. Selection landed
+        // back on Alpha (index 0) after the toggle, so move off it to check its unselected color.
+        assertEquals(listOf("Alpha", "Beta Two", "Gamma"), visibleRowLabels(activity))
+        activity.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN, 0))
+        assertEquals(Palette.GRAY_FAINT, rowTextColors(activity)[0])
+        assertEquals(Color.WHITE, rowTextColors(activity)[1]) // Beta Two, now selected
+
+        activity.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_UP, 0)) // back to Alpha
+        tapStar(activity)
+        assertEquals(listOf("1 Rename", "2 Unhide", "3 Hide hidden apps"), menuLabels(menuSheetOf(activity)))
+        chooseMenuItem(activity, 2) // Unhide
+
+        assertEquals(listOf("Alpha", "Beta Two", "Gamma"), visibleRowLabels(activity))
+        assertEquals(Color.WHITE, rowTextColors(activity)[0])
+    }
+
+    @Test
+    fun `clearing the search back to empty in launch-directly mode restarts fresh, releasing the IME's grip on star`() {
+        // Confirmed on-device: this hardware's T9 IME swallows `*` once the search field has
+        // taken real focus, and neither clearing view focus nor Activity.recreate() releases it —
+        // only a genuinely fresh Activity/window does (SearchField.onDeactivated's own doc
+        // comment). Browse all (launchDirectly) is a plain startActivity with no result owed to
+        // anyone, so it's safe to restart.
+        val activity = buildActivity(launchDirectly = true)
+        typeSearch(activity, "gam")
+
+        typeSearch(activity, "")
+        shadowOf(android.os.Looper.getMainLooper()).idle()
+
+        assertTrue(activity.isFinishing)
+        val started = shadowOf(activity).nextStartedActivity
+        assertEquals(AppPickerActivity::class.java.name, started?.component?.className)
+        assertTrue(started?.getBooleanExtra(AppPickerActivity.EXTRA_LAUNCH_DIRECTLY, false) ?: false)
+    }
+
+    @Test
+    fun `clearing the search back to empty in the link picker does not restart, since that would cancel the pending result`() {
+        val activity = buildActivity(allowClear = true)
+        typeSearch(activity, "gam")
+
+        typeSearch(activity, "")
+        shadowOf(android.os.Looper.getMainLooper()).idle()
+
+        assertFalse(activity.isFinishing)
+        assertNull(shadowOf(activity).nextStartedActivity)
+    }
+
+    @Test
+    fun `hiding an app here is reflected in AppRepository's global override`() {
+        val activity = buildActivity()
+        tapStar(activity)
+        chooseMenuItem(activity, 2) // Hide Alpha
+
+        assertEquals(true, AppRepository.loadOverrides(context)["com.example.alpha/com.example.alpha.Main"]?.hidden)
     }
 }

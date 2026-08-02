@@ -1,6 +1,10 @@
 package life.furrer.l9
 
 import android.view.KeyEvent
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.TextView
+import life.furrer.nine.core.ui.MenuSheet
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -43,6 +47,17 @@ class MainActivityTest {
     private fun tap(activity: MainActivity, keyCode: Int) {
         val event = down(activity, keyCode)
         activity.onKeyUp(keyCode, event)
+    }
+
+    private fun menuSheetOf(activity: MainActivity): MenuSheet {
+        val root = activity.findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0) as FrameLayout
+        return root.getChildAt(1) as MenuSheet
+    }
+
+    private fun menuLabels(menuSheet: MenuSheet): List<String> {
+        val column = menuSheet.getChildAt(0) as LinearLayout
+        val listContainer = column.getChildAt(1) as LinearLayout
+        return (0 until listContainer.childCount).map { (listContainer.getChildAt(it) as TextView).text.toString() }
     }
 
     @Test
@@ -98,10 +113,30 @@ class MainActivityTest {
     }
 
     @Test
-    fun `star then pound enters reorder mode, and down swaps the selected slot down`() {
+    fun `star opens a menu offering Link app, Rename, Reorder and Settings for an occupied slot`() {
         val activity = buildActivity()
         tap(activity, KeyEvent.KEYCODE_STAR)
-        down(activity, KeyEvent.KEYCODE_POUND)
+
+        assertEquals(
+            listOf("1 Link app", "2 Rename", "3 Reorder", "4 Settings"),
+            menuLabels(menuSheetOf(activity)),
+        )
+    }
+
+    @Test
+    fun `star's menu skips Rename for an empty slot`() {
+        val activity = buildActivity()
+        down(activity, KeyEvent.KEYCODE_DPAD_UP) // wraps to slot 3 (index 2), which is empty
+        tap(activity, KeyEvent.KEYCODE_STAR)
+
+        assertEquals(listOf("1 Link app", "2 Reorder", "3 Settings"), menuLabels(menuSheetOf(activity)))
+    }
+
+    @Test
+    fun `choosing Reorder from the star menu enters reorder mode, and down swaps the selected slot down`() {
+        val activity = buildActivity()
+        tap(activity, KeyEvent.KEYCODE_STAR)
+        down(activity, KeyEvent.KEYCODE_3) // "3 Reorder"
 
         down(activity, KeyEvent.KEYCODE_DPAD_DOWN)
 
@@ -110,10 +145,10 @@ class MainActivityTest {
     }
 
     @Test
-    fun `star toggles reorder mode off again without acting on other keys`() {
+    fun `a bare star tap exits reorder mode without acting on other keys`() {
         val activity = buildActivity()
         tap(activity, KeyEvent.KEYCODE_STAR)
-        down(activity, KeyEvent.KEYCODE_POUND)
+        down(activity, KeyEvent.KEYCODE_3) // "3 Reorder"
 
         tap(activity, KeyEvent.KEYCODE_STAR)
         // Now out of reorder mode: a digit press should launch normally instead of swapping.
@@ -124,6 +159,7 @@ class MainActivityTest {
         // Untouched by the aborted reorder.
         assertEquals(listOf(appA, appB, null), AppRepository.loadSlots(context))
     }
+
 
     @Test
     fun `long-pressing star opens Settings`() {

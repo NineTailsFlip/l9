@@ -11,6 +11,10 @@ import org.json.JSONObject
 
 enum class ListAlignment { LEFT, CENTER, RIGHT }
 
+/** A rename or hide, keyed by the app's own component identity rather than by whichever slot/side
+ *  key/list entry it was actioned from — see [AppEntry]'s own doc comment for why. */
+data class AppOverride(val customLabel: String? = null, val hidden: Boolean = false)
+
 object AppRepository {
     private const val KEY_SLOTS = "slots"
     private const val KEY_SLOT_COUNT = "slot_count"
@@ -20,6 +24,7 @@ object AppRepository {
     private const val KEY_RIGHT_APP = "right_app"
     private const val KEY_SHOW_CALENDAR_DIVIDER = "show_calendar_divider"
     private const val KEY_BLACK_WALLPAPER_ENABLED = "black_wallpaper_enabled"
+    private const val KEY_APP_OVERRIDES = "app_overrides"
     private const val DEFAULT_SLOT_COUNT = 4
 
     fun getSlotCount(context: Context): Int =
@@ -63,10 +68,11 @@ object AppRepository {
         val count = getSlotCount(context)
         val json = prefs(context).getString(KEY_SLOTS, null) ?: return List(count) { null }
         val array = JSONArray(json)
+        val overrides = loadOverrides(context)
         val slots = MutableList<AppEntry?>(count) { null }
         for (i in 0 until minOf(count, array.length())) {
             val obj = array.optJSONObject(i) ?: continue
-            slots[i] = AppEntry.fromJson(obj)
+            slots[i] = AppEntry.fromJson(obj).withOverride(overrides)
         }
         return slots
     }
@@ -89,7 +95,7 @@ object AppRepository {
 
     private fun loadSingleApp(context: Context, key: String): AppEntry? {
         val json = prefs(context).getString(key, null) ?: return null
-        return AppEntry.fromJson(JSONObject(json))
+        return AppEntry.fromJson(JSONObject(json)).withOverride(loadOverrides(context))
     }
 
     private fun saveSingleApp(context: Context, key: String, entry: AppEntry?) {
@@ -100,8 +106,12 @@ object AppRepository {
         }
     }
 
-    fun queryInstalledApps(context: Context): List<AppEntry> {
+    /** Every launcher-capable activity, with any [AppOverride] applied. [includeHidden] is only
+     *  ever true for the "show hidden apps" toggle in Browse all / the link picker — everywhere
+     *  else (and by default there too) hidden apps drop out of the list entirely. */
+    fun queryInstalledApps(context: Context, includeHidden: Boolean = false): List<AppEntry> {
         val pm = context.packageManager
+        val overrides = loadOverrides(context)
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         return pm.queryIntentActivities(intent, 0)
             .map { info ->
@@ -109,9 +119,62 @@ object AppRepository {
                     packageName = info.activityInfo.packageName,
                     activityName = info.activityInfo.name,
                     label = info.loadLabel(pm).toString(),
-                )
+                ).withOverride(overrides)
             }
-            .sortedBy { it.label.lowercase() }
+            .filter { includeHidden || !it.hidden }
+            .sortedBy { it.displayLabel.lowercase() }
+    }
+
+    private fun componentKey(packageName: String, activityName: String) = "$packageName/$activityName"
+
+    private fun AppEntry.withOverride(overrides: Map<String, AppOverride>): AppEntry {
+        val override = overrides[componentKey(packageName, activityName)] ?: return this
+        return copy(customLabel = override.customLabel, hidden = override.hidden)
+    }
+
+    fun loadOverrides(context: Context): Map<String, AppOverride> {
+        val json = prefs(context).getString(KEY_APP_OVERRIDES, null) ?: return emptyMap()
+        val obj = JSONObject(json)
+        val overrides = mutableMapOf<String, AppOverride>()
+        obj.keys().forEach { key ->
+            val entryObj = obj.getJSONObject(key)
+            overrides[key] = AppOverride(
+                customLabel = entryObj.optString("customLabel").ifEmpty { null },
+                hidden = entryObj.optBoolean("hidden", false),
+            )
+        }
+        return overrides
+    }
+
+    private fun saveOverrides(context: Context, overrides: Map<String, AppOverride>) {
+        val obj = JSONObject()
+        for ((key, override) in overrides) {
+            if (override.customLabel == null && !override.hidden) continue
+            obj.put(
+                key,
+                JSONObject().apply {
+                    if (override.customLabel != null) put("customLabel", override.customLabel)
+                    put("hidden", override.hidden)
+                },
+            )
+        }
+        prefs(context).edit().putString(KEY_APP_OVERRIDES, obj.toString()).apply()
+    }
+
+    /** Renames [packageName]/[activityName] everywhere it's shown (slots, side keys, Browse all,
+     *  the link picker) — a blank/null [label] clears back to the app's own system label. */
+    fun setCustomLabel(context: Context, packageName: String, activityName: String, label: String?) {
+        val key = componentKey(packageName, activityName)
+        val overrides = loadOverrides(context).toMutableMap()
+        overrides[key] = (overrides[key] ?: AppOverride()).copy(customLabel = label)
+        saveOverrides(context, overrides)
+    }
+
+    fun setHidden(context: Context, packageName: String, activityName: String, hidden: Boolean) {
+        val key = componentKey(packageName, activityName)
+        val overrides = loadOverrides(context).toMutableMap()
+        overrides[key] = (overrides[key] ?: AppOverride()).copy(hidden = hidden)
+        saveOverrides(context, overrides)
     }
 
     /** Launches [entry], returning false if the app is no longer installed/available. */
