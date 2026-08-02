@@ -49,7 +49,7 @@ class AppEntryTest {
     fun `an empty custom label in json is treated as absent`() {
         // AppRepository never writes an empty customLabel (MainActivity.onRenameRequested maps
         // blank input back to null before saving), but fromJson must still be defensive since it
-        // also drives BackupRepository's import path, which trusts whatever the file contains.
+        // also drives core's Backup import path, which trusts whatever the file contains.
         val obj = AppEntry("pkg", "activity", label = "Original").toJson()
         obj.put("customLabel", "")
         val restored = AppEntry.fromJson(obj)

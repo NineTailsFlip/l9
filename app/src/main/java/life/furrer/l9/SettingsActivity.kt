@@ -8,9 +8,6 @@ import android.graphics.Color
 import android.provider.Settings
 import android.widget.Toast
 import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import life.furrer.nine.core.NineSurface
 import life.furrer.nine.core.settings.NineSettingsActivity
 import life.furrer.nine.core.settings.SectionScope
@@ -24,11 +21,9 @@ private const val MAX_CALENDAR_ENTRIES = 9
 
 private const val REQUEST_PICK_LEFT_APP = 300
 private const val REQUEST_PICK_RIGHT_APP = 301
-private const val REQUEST_EXPORT_SETTINGS = 302
-private const val REQUEST_IMPORT_SETTINGS = 303
 
-/** L9's own sections on top of core's shared Theme/About — Apps, Calendar, Notifications, Speed
- *  dial, and (until Phase 5 moves Backup into core) its own Backup section. */
+/** L9's own sections on top of core's shared Theme/Backup/About — Apps, Calendar, Notifications,
+ *  Speed dial. */
 class SettingsActivity : NineSettingsActivity() {
 
     override fun buildAppSections(screen: SettingsScreen, surface: NineSurface) {
@@ -108,13 +103,6 @@ class SettingsActivity : NineSettingsActivity() {
         }
     }
 
-    // Backup moves into core's shared Settings framework in a later phase; until then L9 supplies
-    // its own rows for the section core already reserves in the shared Theme/Backup/About order.
-    override fun buildBackupSection(scope: SectionScope) {
-        scope.action(label = "Export settings", onSelect = { exportSettings() })
-        scope.action(label = "Import settings", onSelect = { confirmImportSettings() })
-    }
-
     override fun buildThemeExtras(scope: SectionScope) {
         scope.toggle(
             label = "Calendar divider",
@@ -144,24 +132,6 @@ class SettingsActivity : NineSettingsActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_EXPORT_SETTINGS) {
-            val uri = data?.data
-            if (resultCode == RESULT_OK && uri != null) {
-                val success = BackupRepository.exportTo(this, uri)
-                Toast.makeText(this, if (success) "Settings exported" else "Export failed", Toast.LENGTH_SHORT).show()
-            }
-            return
-        }
-        if (requestCode == REQUEST_IMPORT_SETTINGS) {
-            val uri = data?.data
-            if (resultCode == RESULT_OK && uri != null) {
-                val imported = BackupRepository.importFrom(this, uri)
-                if (imported) refresh()
-                val message = if (imported) "Settings imported" else "Import failed — not a valid L9 backup file"
-                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-            }
-            return
-        }
         if (resultCode != RESULT_OK || data == null) return
         if (requestCode != REQUEST_PICK_LEFT_APP && requestCode != REQUEST_PICK_RIGHT_APP) return
         val entry = if (data.getBooleanExtra(AppPickerActivity.EXTRA_CLEAR, false)) {
@@ -179,34 +149,6 @@ class SettingsActivity : NineSettingsActivity() {
             AppRepository.setRightApp(this, entry)
         }
         refresh()
-    }
-
-    private fun exportSettings() {
-        val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
-        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/json"
-            putExtra(Intent.EXTRA_TITLE, "l9-settings-$timestamp.json")
-        }
-        startActivityForResult(intent, REQUEST_EXPORT_SETTINGS)
-    }
-
-    private fun confirmImportSettings() {
-        AlertDialog.Builder(this, dialogThemeResId())
-            .setTitle("Import settings")
-            .setMessage("This replaces all current L9 settings with the contents of the chosen file.")
-            .setPositiveButton("Choose file") { _, _ ->
-                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    // Not restricted to "application/json" — many file managers report JSON
-                    // files under a different MIME type, and BackupRepository validates the
-                    // content itself once a file is picked.
-                    type = "*/*"
-                }
-                startActivityForResult(intent, REQUEST_IMPORT_SETTINGS)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
     }
 
     private fun confirmOpenNotificationSettings() {
