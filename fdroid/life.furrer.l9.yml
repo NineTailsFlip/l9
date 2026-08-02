@@ -26,9 +26,9 @@ Repo: https://git.sr.ht/~timofurrer/nine
 Binaries: https://nine.furrer.life/releases/l9/%v/l9-%v.apk
 
 Builds:
-  - versionName: 0.6.0
-    versionCode: 8
-    commit: v0.6.0
+  - versionName: 0.7.0
+    versionCode: 10
+    commit: v2026.08.02
     subdir: l9/app
     gradle:
       - yes
@@ -37,5 +37,5 @@ AllowedAPKSigningKeys: 41f03b315163e438edb9179af441f556c49d3e380d36660b61a7d8e6f
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.6.0
-CurrentVersionCode: 8
+CurrentVersion: 0.7.0
+CurrentVersionCode: 10
