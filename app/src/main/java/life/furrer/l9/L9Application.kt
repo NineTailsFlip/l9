@@ -18,6 +18,7 @@ private val l9App = NineApp(
     name = "L9",
     tagline = "Launcher on 9 keys",
     hasHintBar = false,
+    settingsActivity = SettingsActivity::class.java,
     surfaces = listOf(
         NineSurface(
             id = "",
