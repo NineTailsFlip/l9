@@ -1,0 +1,2 @@
+- Settings now uses a more compact row layout
+- Removed the 12-hour/24-hour time format setting — time is now always shown as 24-hour
