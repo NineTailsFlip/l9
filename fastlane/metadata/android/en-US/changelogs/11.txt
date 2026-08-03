@@ -1,0 +1,4 @@
+- Renaming or hiding an app now applies everywhere it appears, not just one slot
+- Home screen and Browse all now use a single numbered * menu (Rename/Hide/Show hidden apps/Settings) instead of the old key combos
+- L9 Settings moved out of Browse all's app list into the * menu
+- Home screen and Browse all app name font sizes are now configurable in Settings
