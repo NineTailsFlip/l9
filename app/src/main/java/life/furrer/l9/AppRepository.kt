@@ -25,7 +25,11 @@ object AppRepository {
     private const val KEY_SHOW_CALENDAR_DIVIDER = "show_calendar_divider"
     private const val KEY_BLACK_WALLPAPER_ENABLED = "black_wallpaper_enabled"
     private const val KEY_APP_OVERRIDES = "app_overrides"
+    private const val KEY_HOME_FONT_SIZE = "home_font_size"
+    private const val KEY_BROWSE_FONT_SIZE = "browse_font_size"
     private const val DEFAULT_SLOT_COUNT = 4
+    const val DEFAULT_HOME_FONT_SIZE = 30
+    const val DEFAULT_BROWSE_FONT_SIZE = 28
 
     fun getSlotCount(context: Context): Int =
         prefs(context).getInt(KEY_SLOT_COUNT, DEFAULT_SLOT_COUNT)
@@ -53,6 +57,20 @@ object AppRepository {
 
     fun setBlackWallpaperEnabled(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_BLACK_WALLPAPER_ENABLED, value).apply()
+    }
+
+    fun getHomeFontSize(context: Context): Int =
+        prefs(context).getInt(KEY_HOME_FONT_SIZE, DEFAULT_HOME_FONT_SIZE)
+
+    fun setHomeFontSize(context: Context, value: Int) {
+        prefs(context).edit().putInt(KEY_HOME_FONT_SIZE, value).apply()
+    }
+
+    fun getBrowseFontSize(context: Context): Int =
+        prefs(context).getInt(KEY_BROWSE_FONT_SIZE, DEFAULT_BROWSE_FONT_SIZE)
+
+    fun setBrowseFontSize(context: Context, value: Int) {
+        prefs(context).edit().putInt(KEY_BROWSE_FONT_SIZE, value).apply()
     }
 
     fun getAlignment(context: Context): ListAlignment {

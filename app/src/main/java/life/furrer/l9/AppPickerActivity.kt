@@ -174,10 +174,11 @@ class AppPickerActivity : Activity() {
             addPseudoRow("Clear this slot")
         }
 
+        val fontSize = AppRepository.getBrowseFontSize(this).toFloat()
         visibleApps.forEach { entry ->
             val row = TextView(this).apply {
                 text = entry.displayLabel
-                textSize = 28f
+                textSize = fontSize
                 setPadding(ROW_SIDE_PADDING, 3, ROW_SIDE_PADDING, 3)
             }
             rows.add(row)
@@ -194,7 +195,7 @@ class AppPickerActivity : Activity() {
     private fun addPseudoRow(text: String) {
         val row = TextView(this).apply {
             this.text = text
-            textSize = 28f
+            textSize = AppRepository.getBrowseFontSize(this@AppPickerActivity).toFloat()
             setPadding(ROW_SIDE_PADDING, 3, ROW_SIDE_PADDING, 3)
         }
         rows.add(row)

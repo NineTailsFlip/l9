@@ -100,9 +100,26 @@ class SettingsActivityTest {
     }
 
     @Test
-    fun `Left key row opens the app picker, allowing clear only when a shortcut is already set`() {
+    fun `Home screen font size and Browse all apps font size step independently within 14 and 48`() {
         val activity = buildActivity()
         moveTo(activity, 3)
+        assertTrue(rows(activity)[3].text.contains("Home screen font size: 30"))
+
+        press(activity, KeyEvent.KEYCODE_DPAD_RIGHT)
+        assertEquals(32, AppRepository.getHomeFontSize(context))
+        assertEquals(AppRepository.DEFAULT_BROWSE_FONT_SIZE, AppRepository.getBrowseFontSize(context))
+
+        press(activity, KeyEvent.KEYCODE_DPAD_DOWN)
+        assertTrue(rows(activity)[4].text.contains("Browse all apps font size: 28"))
+        press(activity, KeyEvent.KEYCODE_DPAD_LEFT)
+        assertEquals(26, AppRepository.getBrowseFontSize(context))
+        assertEquals(32, AppRepository.getHomeFontSize(context))
+    }
+
+    @Test
+    fun `Left key row opens the app picker, allowing clear only when a shortcut is already set`() {
+        val activity = buildActivity()
+        moveTo(activity, 5)
         press(activity, KeyEvent.KEYCODE_DPAD_CENTER)
 
         val started = shadowOf(activity).nextStartedActivityForResult
@@ -113,7 +130,7 @@ class SettingsActivityTest {
     @Test
     fun `Left-Right do nothing on the Left key action row`() {
         val activity = buildActivity()
-        moveTo(activity, 3)
+        moveTo(activity, 5)
         press(activity, KeyEvent.KEYCODE_DPAD_LEFT)
         press(activity, KeyEvent.KEYCODE_DPAD_RIGHT)
 

@@ -334,13 +334,14 @@ class MainActivity : Activity() {
         numberViews.clear()
         labelViews.clear()
         spacerViews.clear()
+        val fontSize = AppRepository.getHomeFontSize(this).toFloat()
         slots.forEach { _ ->
             val numberView = TextView(this).apply {
                 textSize = 18f
                 gravity = Gravity.END
             }
             val labelView = TextView(this).apply {
-                textSize = 30f
+                textSize = fontSize
             }
             // Balances numberView's width on the opposite side so that centering
             // [number, label, spacer] as a block centers the label alone.

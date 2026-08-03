@@ -18,6 +18,8 @@ private const val MIN_SLOT_COUNT = 1
 private const val MAX_SLOT_COUNT = 9
 private const val MIN_CALENDAR_ENTRIES = 0
 private const val MAX_CALENDAR_ENTRIES = 9
+private const val MIN_FONT_SIZE = 14
+private const val MAX_FONT_SIZE = 48
 
 private const val REQUEST_PICK_LEFT_APP = 300
 private const val REQUEST_PICK_RIGHT_APP = 301
@@ -46,6 +48,22 @@ class SettingsActivity : NineSettingsActivity() {
                 get = { AppRepository.getAlignment(this@SettingsActivity) },
                 set = { AppRepository.setAlignment(this@SettingsActivity, it ?: ListAlignment.LEFT) },
                 render = { it.name.lowercase() },
+            )
+            intRange(
+                label = "Home screen font size",
+                min = MIN_FONT_SIZE,
+                max = MAX_FONT_SIZE,
+                step = 2,
+                get = { AppRepository.getHomeFontSize(this@SettingsActivity) },
+                set = { AppRepository.setHomeFontSize(this@SettingsActivity, it) },
+            )
+            intRange(
+                label = "Browse all apps font size",
+                min = MIN_FONT_SIZE,
+                max = MAX_FONT_SIZE,
+                step = 2,
+                get = { AppRepository.getBrowseFontSize(this@SettingsActivity) },
+                set = { AppRepository.setBrowseFontSize(this@SettingsActivity, it) },
             )
             action(
                 label = "Left key",
