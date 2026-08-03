@@ -56,8 +56,9 @@ class AppPickerActivity : Activity() {
     private lateinit var searchField: SearchField
     private lateinit var noMatchesLabel: TextView
     private lateinit var menuSheet: MenuSheet
-    /** rows[0] is a pseudo-entry ("L9 Settings" or "Clear this slot") when [launchDirectly] or
-     *  [allowClear]; the rest line up 1:1 with [visibleApps]. */
+    /** rows[0] is a pseudo-entry ("Clear this slot") when [allowClear]; the rest line up 1:1 with
+     *  [visibleApps]. Browse-all ([launchDirectly]) reaches L9 Settings via the `*` menu instead
+     *  of a pseudo-row, so it isn't listed alongside real apps. */
     private val rows = mutableListOf<TextView>()
     /** Parallel to [rows] — a hidden app is dimmed further than an ordinary unselected row
      *  instead of being labelled, so "show hidden apps" reads as a visual demotion rather than a
@@ -169,9 +170,7 @@ class AppPickerActivity : Activity() {
         rows.clear()
         rowIsHidden.clear()
 
-        if (launchDirectly) {
-            addPseudoRow("L9 Settings")
-        } else if (allowClear) {
+        if (allowClear) {
             addPseudoRow("Clear this slot")
         }
 
@@ -291,22 +290,16 @@ class AppPickerActivity : Activity() {
         render()
     }
 
-    /** null both when nothing is selected and when the selected row is the pseudo-row ("L9
-     *  Settings"/"Clear this slot") rather than a real app — callers that only care about acting
-     *  on an app (like the `*` menu) can treat both the same way. */
+    /** null both when nothing is selected and when the selected row is the pseudo-row ("Clear
+     *  this slot") rather than a real app — callers that only care about acting on an app (like
+     *  the `*` menu) can treat both the same way. */
     private fun selectedAppOrNull(): AppEntry? {
-        val hasPseudoRow = launchDirectly || allowClear
-        if (hasPseudoRow && selectedIndex == 0) return null
-        val appIndex = if (hasPseudoRow) selectedIndex - 1 else selectedIndex
+        if (allowClear && selectedIndex == 0) return null
+        val appIndex = if (allowClear) selectedIndex - 1 else selectedIndex
         return visibleApps.getOrNull(appIndex)
     }
 
     private fun confirmSelection() {
-        if (launchDirectly && selectedIndex == 0) {
-            startActivity(Intent(this, SettingsActivity::class.java))
-            finish()
-            return
-        }
         if (allowClear && selectedIndex == 0) {
             setResult(RESULT_OK, Intent().putExtra(EXTRA_CLEAR, true))
             finish()
@@ -346,7 +339,15 @@ class AppPickerActivity : Activity() {
             }
         }
         items += MenuItem(if (showHidden) "Hide hidden apps" else "Show hidden apps") { toggleShowHidden() }
+        if (launchDirectly) {
+            items += MenuItem("L9 Settings") { openL9Settings() }
+        }
         menuSheet.show(items)
+    }
+
+    private fun openL9Settings() {
+        startActivity(Intent(this, SettingsActivity::class.java))
+        finish()
     }
 
     private fun onRenameRequested(entry: AppEntry) {

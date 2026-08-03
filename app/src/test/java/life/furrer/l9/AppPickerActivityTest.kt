@@ -164,10 +164,8 @@ class AppPickerActivityTest {
     }
 
     @Test
-    fun `launch-directly mode prepends a settings row and launches the app immediately on confirm`() {
+    fun `launch-directly mode has no settings pseudo-row and launches the first app immediately on confirm`() {
         val activity = buildActivity(launchDirectly = true)
-        // Row 0 is the "L9 Settings" pseudo-row, so move down once to reach the first real app.
-        activity.dispatchKeyEvent(KeyEvent(0, 0, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN, 0))
         tapOk(activity)
 
         val started = shadowOf(activity).nextStartedActivity
@@ -175,9 +173,15 @@ class AppPickerActivityTest {
     }
 
     @Test
-    fun `launch-directly mode opens Settings when the pseudo-row itself is confirmed`() {
+    fun `launch-directly mode offers L9 Settings from the star menu instead`() {
         val activity = buildActivity(launchDirectly = true)
-        tapOk(activity)
+        tapStar(activity)
+
+        assertEquals(
+            listOf("1 Rename", "2 Hide", "3 Show hidden apps", "4 L9 Settings"),
+            menuLabels(menuSheetOf(activity)),
+        )
+        chooseMenuItem(activity, 4)
 
         val started = shadowOf(activity).nextStartedActivity
         assertEquals(SettingsActivity::class.java.name, started.component?.className)
