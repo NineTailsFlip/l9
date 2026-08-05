@@ -391,7 +391,7 @@ class MainActivity : Activity() {
             spacerViews[index].visibility = if (balanceSpacer) View.INVISIBLE else View.GONE
 
             val label = labelViews[index]
-            val baseText = entry?.displayLabel ?: "press *0 to set"
+            val baseText = entry?.displayLabel ?: "press * 1 to set"
             val displayText = if (selected && reorderModeActive) "↕ $baseText" else baseText
             val labelColor = if (selected) Color.WHITE else Palette.GRAY_DIM
             if (inlineIndex) {
