@@ -300,8 +300,17 @@ class MainActivity : Activity() {
                 val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
                 if (level >= 0 && scale > 0) {
                     val percent = level * 100 / scale
+                    val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                    val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                        status == BatteryManager.BATTERY_STATUS_FULL
                     batteryView.text = "$percent%"
-                    batteryView.setTextColor(if (percent < LOW_BATTERY_THRESHOLD) Palette.RED else Palette.GRAY_DIM)
+                    batteryView.setTextColor(
+                        when {
+                            isCharging -> Palette.GREEN
+                            percent < LOW_BATTERY_THRESHOLD -> Palette.RED
+                            else -> Palette.GRAY_DIM
+                        },
+                    )
                 }
             }
         }
