@@ -171,29 +171,67 @@ class MainActivityTest {
         assertEquals(SettingsActivity::class.java.name, started.component?.className)
     }
 
+    /** Simulates holding [keyCode] down and releasing it [heldMillis] later — separate from the
+     *  Looper's own fake clock (which [tap]/[down] never advance either), since MainActivity now
+     *  reads the hold length off the up [KeyEvent]'s own down/event times rather than off a fixed
+     *  Handler delay. */
+    private fun holdAndRelease(activity: MainActivity, keyCode: Int, heldMillis: Long) {
+        activity.onKeyDown(keyCode, KeyEvent(0, 0, KeyEvent.ACTION_DOWN, keyCode, 0))
+        activity.onKeyUp(keyCode, KeyEvent(0, heldMillis, KeyEvent.ACTION_UP, keyCode, 0))
+    }
+
     @Test
-    fun `holding a speed-dial digit for the full delay places the call`() {
+    fun `holding a speed-dial digit past the debounce and letting go places the call`() {
         shadowOf(context).grantPermissions(android.Manifest.permission.CALL_PHONE)
         SpeedDialRepository.setContact(context, 2, SpeedDialContact("Alice", "12345"))
         val activity = buildActivity()
 
         down(activity, KeyEvent.KEYCODE_2)
-        shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(2000))
-        assertEquals("Calling Alice in 1 second…", ShadowToast.getTextOfLatestToast())
-
         shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(1000))
+        assertEquals("Press Call to call Alice, or just let go", ShadowToast.getTextOfLatestToast())
+
+        activity.onKeyUp(KeyEvent.KEYCODE_2, KeyEvent(0, 500, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_2, 0))
+
         val started = shadowOf(activity).nextStartedActivity
         assertEquals(android.content.Intent.ACTION_CALL, started.action)
         assertEquals("tel:12345", started.data?.toString())
     }
 
     @Test
-    fun `holding a speed-dial digit without call permission warns instead of calling`() {
+    fun `pressing Call while holding a speed-dial digit places the call immediately`() {
+        shadowOf(context).grantPermissions(android.Manifest.permission.CALL_PHONE)
         SpeedDialRepository.setContact(context, 2, SpeedDialContact("Alice", "12345"))
         val activity = buildActivity()
 
         down(activity, KeyEvent.KEYCODE_2)
-        shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(3000))
+        down(activity, KeyEvent.KEYCODE_CALL)
+
+        val started = shadowOf(activity).nextStartedActivity
+        assertEquals(android.content.Intent.ACTION_CALL, started.action)
+        assertEquals("tel:12345", started.data?.toString())
+    }
+
+    @Test
+    fun `letting go after Call already placed the call does not call again`() {
+        shadowOf(context).grantPermissions(android.Manifest.permission.CALL_PHONE)
+        SpeedDialRepository.setContact(context, 2, SpeedDialContact("Alice", "12345"))
+        val activity = buildActivity()
+
+        down(activity, KeyEvent.KEYCODE_2)
+        down(activity, KeyEvent.KEYCODE_CALL)
+        shadowOf(activity).nextStartedActivity // consume the call already placed by Call
+
+        activity.onKeyUp(KeyEvent.KEYCODE_2, KeyEvent(0, 1000, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_2, 0))
+
+        assertNull(shadowOf(activity).nextStartedActivity)
+    }
+
+    @Test
+    fun `releasing a held speed-dial digit without call permission warns instead of calling`() {
+        SpeedDialRepository.setContact(context, 2, SpeedDialContact("Alice", "12345"))
+        val activity = buildActivity()
+
+        holdAndRelease(activity, KeyEvent.KEYCODE_2, heldMillis = 500)
 
         assertEquals("Call permission not granted — check Settings", ShadowToast.getTextOfLatestToast())
         assertNull(shadowOf(activity).nextStartedActivity)
@@ -202,7 +240,7 @@ class MainActivityTest {
     @Test
     fun `releasing a speed-dial digit quickly falls through to launching that slot`() {
         // Digit 2 has both a speed-dial contact and slot 2's app (App B) assigned — a quick tap
-        // must launch App B, not silently do nothing, since the hold timer never got a chance to fire.
+        // must launch App B, not silently do nothing, since it never held past the debounce.
         SpeedDialRepository.setContact(context, 2, SpeedDialContact("Alice", "12345"))
         val activity = buildActivity()
 

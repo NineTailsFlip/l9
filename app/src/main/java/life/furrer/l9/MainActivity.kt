@@ -48,8 +48,11 @@ private const val REQUEST_PICK_APP = 1
 private const val INDEX_COLUMN_WIDTH = 104
 private const val ROW_SIDE_PADDING = 28
 private const val DIVIDER_GREY = 0xFF333333.toInt()
-private const val SPEED_DIAL_WARNING_DELAY_MS = 2000L
-private const val SPEED_DIAL_CALL_DELAY_MS = 3000L
+private const val SPEED_DIAL_WARNING_DELAY_MS = 1000L
+// Below this hold length, letting go is a normal quick tap (this digit's slot/app) rather than a
+// deliberate hold — there's no upper bound above it: the call fires whenever the key comes back
+// up, or immediately on KEYCODE_CALL, whichever happens first.
+private const val SPEED_DIAL_RELEASE_DEBOUNCE_MS = 350L
 
 /** The home screen's own key vocabulary — Star means "exit reorder mode" while reordering (its
  *  menu-opening meaning otherwise lives outside this mapping, see onKeyUp) and digit 0 means
@@ -113,9 +116,7 @@ class MainActivity : Activity() {
 
     private val speedDialHandler = Handler(Looper.getMainLooper())
     private var speedDialWarningRunnable: Runnable? = null
-    private var speedDialCallRunnable: Runnable? = null
     private var pendingSpeedDialDigit: Int? = null
-    private var speedDialWarningShown = false
     private var speedDialFired = false
     // Identifies the physical hold that started the current speed-dial timer, independent of
     // pendingSpeedDialDigit — see onKeyDown's use of it for why the two can't be conflated.
@@ -446,7 +447,6 @@ class MainActivity : Activity() {
                 if (contact != null) {
                     pendingSpeedDialDigit = speedDialDigit
                     speedDialSessionDownTime = event.downTime
-                    speedDialWarningShown = false
                     speedDialFired = false
                     startSpeedDialTimer(contact)
                     return true
@@ -459,6 +459,17 @@ class MainActivity : Activity() {
                 // never actually released — confirmed via logcat: the "up" and next "down" shared
                 // the same downTime and a continuing (non-zero) repeatCount. Without this,
                 // whatever app is assigned to the same digit launches right after the call.
+                return true
+            }
+        }
+        if (keyCode == KeyEvent.KEYCODE_CALL && event.repeatCount == 0) {
+            // A digit is being held for speed dial: Call places it right away instead of making
+            // the user let go of the digit first.
+            val contact = pendingSpeedDialDigit?.let { SpeedDialRepository.loadContacts(this)[it] }
+            if (contact != null && !speedDialFired) {
+                speedDialFired = true
+                cancelSpeedDialTimer()
+                placeCall(contact)
                 return true
             }
         }
@@ -548,19 +559,24 @@ class MainActivity : Activity() {
         val speedDialDigit = digitFor(keyCode, event)
         if (speedDialDigit != null && pendingSpeedDialDigit == speedDialDigit) {
             cancelSpeedDialTimer()
-            if (!speedDialFired && !speedDialWarningShown) {
-                // Short tap: fall through to this digit's normal meaning.
-                if (speedDialDigit == 0) {
-                    startActivity(
-                        Intent(this, AppPickerActivity::class.java)
-                            .putExtra(AppPickerActivity.EXTRA_LAUNCH_DIRECTLY, true)
-                    )
+            if (!speedDialFired) {
+                if (event.eventTime - event.downTime >= SPEED_DIAL_RELEASE_DEBOUNCE_MS) {
+                    // Held long enough: letting go places the call, same as pressing Call would.
+                    SpeedDialRepository.loadContacts(this)[speedDialDigit]?.let { placeCall(it) }
                 } else {
-                    val index = speedDialDigit - 1
-                    if (index in slots.indices) {
-                        selectedIndex = index
-                        render()
-                        onSelect(index)
+                    // Quick tap: fall through to this digit's normal meaning.
+                    if (speedDialDigit == 0) {
+                        startActivity(
+                            Intent(this, AppPickerActivity::class.java)
+                                .putExtra(AppPickerActivity.EXTRA_LAUNCH_DIRECTLY, true)
+                        )
+                    } else {
+                        val index = speedDialDigit - 1
+                        if (index in slots.indices) {
+                            selectedIndex = index
+                            render()
+                            onSelect(index)
+                        }
                     }
                 }
             }
@@ -597,24 +613,15 @@ class MainActivity : Activity() {
 
     private fun startSpeedDialTimer(contact: SpeedDialContact) {
         val warning = Runnable {
-            speedDialWarningShown = true
-            Toast.makeText(this, "Calling ${contact.name} in 1 second…", Toast.LENGTH_SHORT).show()
-        }
-        val call = Runnable {
-            speedDialFired = true
-            placeCall(contact)
+            Toast.makeText(this, "Press Call to call ${contact.name}, or just let go", Toast.LENGTH_SHORT).show()
         }
         speedDialWarningRunnable = warning
-        speedDialCallRunnable = call
         speedDialHandler.postDelayed(warning, SPEED_DIAL_WARNING_DELAY_MS)
-        speedDialHandler.postDelayed(call, SPEED_DIAL_CALL_DELAY_MS)
     }
 
     private fun cancelSpeedDialTimer() {
         speedDialWarningRunnable?.let { speedDialHandler.removeCallbacks(it) }
-        speedDialCallRunnable?.let { speedDialHandler.removeCallbacks(it) }
         speedDialWarningRunnable = null
-        speedDialCallRunnable = null
     }
 
     private fun placeCall(contact: SpeedDialContact) {

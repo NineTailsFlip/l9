@@ -35,7 +35,7 @@ private val l9App = NineApp(
 
                 Left and Right are a second pair of one-tap shortcuts to apps of your choice, independent
                 of the numbered slots. You can also assign a contact to any digit for speed dial: hold
-                the key down and, after a short warning, it places the call.
+                the key down, then either press Call or let go to place the call.
 
                 The "*" key is a command prefix for the less common actions — reordering slots, renaming
                 a slot, reassigning a slot's app, and jumping into Settings. See "Key mapping" for the
@@ -48,7 +48,7 @@ private val l9App = NineApp(
                 KeyHelp("0", "Browse every installed app."),
                 KeyHelp("Left / Right", "Launch the configured shortcut app."),
                 KeyHelp("Hold Left / Right", "Reassign that shortcut's app."),
-                KeyHelp("Hold a digit\nwith speed dial set", "Call the assigned contact after a warning."),
+                KeyHelp("Hold a digit\nwith speed dial set", "Then press Call, or let go, to call the assigned contact."),
                 KeyHelp("*", "Does nothing on its own — see below."),
                 KeyHelp(
                     "* then #",
