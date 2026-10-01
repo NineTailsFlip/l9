@@ -50,9 +50,13 @@ private const val ROW_SIDE_PADDING = 28
 private const val DIVIDER_GREY = 0xFF333333.toInt()
 private const val SPEED_DIAL_WARNING_DELAY_MS = 1000L
 // Below this hold length, letting go is a normal quick tap (this digit's slot/app) rather than a
-// deliberate hold — there's no upper bound above it: the call fires whenever the key comes back
-// up, or immediately on KEYCODE_CALL, whichever happens first.
+// deliberate hold. Past it, letting go never places the call by itself — only KEYCODE_CALL does,
+// either while the digit is still held or within SPEED_DIAL_CALL_GRACE_MS after it's released.
 private const val SPEED_DIAL_RELEASE_DEBOUNCE_MS = 350L
+// How long after letting go of a deliberately-held digit the physical Call key still counts.
+// Long enough to cover the finger's travel from the digit to Call, short enough that letting go
+// with no follow-up reliably reads as "changed my mind" rather than "call".
+private const val SPEED_DIAL_CALL_GRACE_MS = 900L
 
 /** The home screen's own key vocabulary — Star means "exit reorder mode" while reordering (its
  *  menu-opening meaning otherwise lives outside this mapping, see onKeyUp) and digit 0 means
@@ -118,6 +122,10 @@ class MainActivity : Activity() {
     private var speedDialWarningRunnable: Runnable? = null
     private var pendingSpeedDialDigit: Int? = null
     private var speedDialFired = false
+    // Set once a deliberately-held digit is released, holding the contact to call if KEYCODE_CALL
+    // arrives within SPEED_DIAL_CALL_GRACE_MS — cleared either by that press or by the grace timer.
+    private var pendingCallContact: SpeedDialContact? = null
+    private var callGraceRunnable: Runnable? = null
     // Identifies the physical hold that started the current speed-dial timer, independent of
     // pendingSpeedDialDigit — see onKeyDown's use of it for why the two can't be conflated.
     private var speedDialSessionDownTime: Long = -1L
@@ -279,6 +287,12 @@ class MainActivity : Activity() {
         notificationReceiver?.let { unregisterReceiver(it) }
         notificationReceiver = null
         cancelSpeedDialTimer()
+        // Unlike pendingSpeedDialDigit below, pendingCallContact only exists after the digit has
+        // already been released, so there's no held-key auto-repeat to preserve it for — drop it
+        // here the same as the other pending*KeyCode trackers, so a resume elsewhere can't have a
+        // stray Call key press place a call the user armed and then walked away from.
+        cancelCallGrace()
+        pendingCallContact = null
         // Deliberately NOT clearing pendingSpeedDialDigit here: placing the call itself
         // (placeCall's startActivity) triggers this same onPause while the user may still be
         // physically holding the digit. If we cleared it, the auto-repeat key-downs Android
@@ -445,6 +459,7 @@ class MainActivity : Activity() {
             if (event.repeatCount == 0) {
                 val contact = SpeedDialRepository.loadContacts(this)[speedDialDigit]
                 if (contact != null) {
+                    cancelCallGrace()
                     pendingSpeedDialDigit = speedDialDigit
                     speedDialSessionDownTime = event.downTime
                     speedDialFired = false
@@ -463,12 +478,15 @@ class MainActivity : Activity() {
             }
         }
         if (keyCode == KeyEvent.KEYCODE_CALL && event.repeatCount == 0) {
-            // A digit is being held for speed dial: Call places it right away instead of making
-            // the user let go of the digit first.
-            val contact = pendingSpeedDialDigit?.let { SpeedDialRepository.loadContacts(this)[it] }
+            // Places the call either while the digit is still held, or within the grace window
+            // after it was released — the only two ways a speed-dial call actually gets placed.
+            val heldContact = pendingSpeedDialDigit?.let { SpeedDialRepository.loadContacts(this)[it] }
+            val contact = heldContact ?: pendingCallContact
             if (contact != null && !speedDialFired) {
                 speedDialFired = true
                 cancelSpeedDialTimer()
+                cancelCallGrace()
+                pendingCallContact = null
                 placeCall(contact)
                 return true
             }
@@ -561,8 +579,9 @@ class MainActivity : Activity() {
             cancelSpeedDialTimer()
             if (!speedDialFired) {
                 if (event.eventTime - event.downTime >= SPEED_DIAL_RELEASE_DEBOUNCE_MS) {
-                    // Held long enough: letting go places the call, same as pressing Call would.
-                    SpeedDialRepository.loadContacts(this)[speedDialDigit]?.let { placeCall(it) }
+                    // Held long enough to mean speed dial, but letting go never places the call by
+                    // itself — only a follow-up KEYCODE_CALL within the grace window does.
+                    SpeedDialRepository.loadContacts(this)[speedDialDigit]?.let { armCallGrace(it) }
                 } else {
                     // Quick tap: fall through to this digit's normal meaning.
                     if (speedDialDigit == 0) {
@@ -613,7 +632,7 @@ class MainActivity : Activity() {
 
     private fun startSpeedDialTimer(contact: SpeedDialContact) {
         val warning = Runnable {
-            Toast.makeText(this, "Press Call to call ${contact.name}, or just let go", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Press Call to call ${contact.name}", Toast.LENGTH_SHORT).show()
         }
         speedDialWarningRunnable = warning
         speedDialHandler.postDelayed(warning, SPEED_DIAL_WARNING_DELAY_MS)
@@ -622,6 +641,18 @@ class MainActivity : Activity() {
     private fun cancelSpeedDialTimer() {
         speedDialWarningRunnable?.let { speedDialHandler.removeCallbacks(it) }
         speedDialWarningRunnable = null
+    }
+
+    private fun armCallGrace(contact: SpeedDialContact) {
+        pendingCallContact = contact
+        val runnable = Runnable { pendingCallContact = null }
+        callGraceRunnable = runnable
+        speedDialHandler.postDelayed(runnable, SPEED_DIAL_CALL_GRACE_MS)
+    }
+
+    private fun cancelCallGrace() {
+        callGraceRunnable?.let { speedDialHandler.removeCallbacks(it) }
+        callGraceRunnable = null
     }
 
     private fun placeCall(contact: SpeedDialContact) {

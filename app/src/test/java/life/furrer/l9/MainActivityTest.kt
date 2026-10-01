@@ -181,20 +181,47 @@ class MainActivityTest {
     }
 
     @Test
-    fun `holding a speed-dial digit past the debounce and letting go places the call`() {
+    fun `holding a speed-dial digit past the debounce and letting go does not place the call by itself`() {
         shadowOf(context).grantPermissions(android.Manifest.permission.CALL_PHONE)
         SpeedDialRepository.setContact(context, 2, SpeedDialContact("Alice", "12345"))
         val activity = buildActivity()
 
         down(activity, KeyEvent.KEYCODE_2)
         shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(1000))
-        assertEquals("Press Call to call Alice, or just let go", ShadowToast.getTextOfLatestToast())
+        assertEquals("Press Call to call Alice", ShadowToast.getTextOfLatestToast())
 
         activity.onKeyUp(KeyEvent.KEYCODE_2, KeyEvent(0, 500, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_2, 0))
+
+        assertNull(shadowOf(activity).nextStartedActivity)
+    }
+
+    @Test
+    fun `pressing Call within the grace window after letting go places the call`() {
+        shadowOf(context).grantPermissions(android.Manifest.permission.CALL_PHONE)
+        SpeedDialRepository.setContact(context, 2, SpeedDialContact("Alice", "12345"))
+        val activity = buildActivity()
+
+        down(activity, KeyEvent.KEYCODE_2)
+        activity.onKeyUp(KeyEvent.KEYCODE_2, KeyEvent(0, 500, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_2, 0))
+        down(activity, KeyEvent.KEYCODE_CALL)
 
         val started = shadowOf(activity).nextStartedActivity
         assertEquals(android.content.Intent.ACTION_CALL, started.action)
         assertEquals("tel:12345", started.data?.toString())
+    }
+
+    @Test
+    fun `pressing Call after the grace window expires does not place the call`() {
+        shadowOf(context).grantPermissions(android.Manifest.permission.CALL_PHONE)
+        SpeedDialRepository.setContact(context, 2, SpeedDialContact("Alice", "12345"))
+        val activity = buildActivity()
+
+        down(activity, KeyEvent.KEYCODE_2)
+        activity.onKeyUp(KeyEvent.KEYCODE_2, KeyEvent(0, 500, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_2, 0))
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(1000))
+        down(activity, KeyEvent.KEYCODE_CALL)
+
+        assertNull(shadowOf(activity).nextStartedActivity)
     }
 
     @Test
@@ -227,11 +254,12 @@ class MainActivityTest {
     }
 
     @Test
-    fun `releasing a held speed-dial digit without call permission warns instead of calling`() {
+    fun `pressing Call without call permission warns instead of calling`() {
         SpeedDialRepository.setContact(context, 2, SpeedDialContact("Alice", "12345"))
         val activity = buildActivity()
 
         holdAndRelease(activity, KeyEvent.KEYCODE_2, heldMillis = 500)
+        down(activity, KeyEvent.KEYCODE_CALL)
 
         assertEquals("Call permission not granted — check Settings", ShadowToast.getTextOfLatestToast())
         assertNull(shadowOf(activity).nextStartedActivity)
