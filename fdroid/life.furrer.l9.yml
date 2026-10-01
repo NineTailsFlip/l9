@@ -28,7 +28,7 @@ Binaries: https://releases.nine.furrer.life/l9/%v/l9-%v.apk
 Builds:
   - versionName: 0.9.0
     versionCode: 12
-    commit: 71f014c95c367bfb169526cc5c12dfdde20720b7
+    commit: 9b279239ff283e444d0e18f7a65a58dd63b7e804
     subdir: l9/app
     gradle:
       - yes
