@@ -37,8 +37,8 @@ private val l9App = NineApp(
                 of the numbered slots. You can also assign a contact to any digit for speed dial: hold
                 the key down, then either press Call or let go to place the call.
 
-                The "*" key is a command prefix for the less common actions — reordering slots, renaming
-                a slot, reassigning a slot's app, and jumping into Settings. See "Key mapping" for the
+                The "*" key opens a menu for the less common actions — linking an app to the selected
+                slot, renaming it, reordering slots, and jumping into Settings. See "Key mapping" for the
                 full list of what every key does.
             """.trimIndent(),
             keyMap = listOf(
@@ -49,14 +49,15 @@ private val l9App = NineApp(
                 KeyHelp("Left / Right", "Launch the configured shortcut app."),
                 KeyHelp("Hold Left / Right", "Reassign that shortcut's app."),
                 KeyHelp("Hold a digit\nwith speed dial set", "Then press Call, or let go, to call the assigned contact."),
-                KeyHelp("*", "Does nothing on its own — see below."),
                 KeyHelp(
-                    "* then #",
-                    "Toggle reorder mode. Up/Down swaps the selected slot with its neighbor; " +
-                        "* or Back drops it back in place.",
+                    "*",
+                    "Open the menu for the selected slot: Link app, Rename, Reorder, Settings. " +
+                        "Press the item's number or move to it and press OK.",
                 ),
-                KeyHelp("* then 0", "(Re)assign the app for the currently selected slot."),
-                KeyHelp("* twice", "Rename the currently selected slot."),
+                KeyHelp(
+                    "Reorder mode",
+                    "Up/Down swaps the selected slot with its neighbor; * or Back drops it in place.",
+                ),
                 KeyHelp("Hold *", "Open Settings."),
                 KeyHelp("Back", "Cancel the current screen, or exit reorder mode."),
             ),
