@@ -130,6 +130,17 @@ class MainActivity : Activity() {
     // pendingSpeedDialDigit — see onKeyDown's use of it for why the two can't be conflated.
     private var speedDialSessionDownTime: Long = -1L
 
+    // A digit, 0 or OK opens something on key-UP, not key-down. Launching on down meant the
+    // physical key was still held when the new app took focus, so its key-up (and any
+    // auto-repeat) landed there instead — confirmed on-device: 5 -> WhatsApp opened the last
+    // chat and TT9 typed "J" (the 5 key's first letter) into its message field off that stray
+    // key-up; OK's would have clicked whatever the new app had focused. The down only records
+    // what to do; the matching up (same keyCode and downTime, i.e. the same physical press) runs
+    // it, once nothing of the press is left to leak.
+    private var pendingReleaseKeyCode: Int? = null
+    private var pendingReleaseDownTime: Long = -1L
+    private var pendingReleaseAction: (() -> Unit)? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         appliedMonospaceFont = applyConfiguredTheme()
@@ -306,6 +317,7 @@ class MainActivity : Activity() {
         // stray key-up on resume can't be mistaken for a real press we witnessed.
         pendingSideKeyCode = null
         pendingStarKeyCode = null
+        clearPendingRelease()
     }
 
     private fun registerBatteryReceiver() {
@@ -500,8 +512,8 @@ class MainActivity : Activity() {
             return true
         }
         val action = homeAction(keyCode, event.number)
-        if (action == Action.Select) {
-            onSelect(selectedIndex)
+        if (action == Action.Select || action is Action.Digit || action == Action.BrowseAll) {
+            if (event.repeatCount == 0) armRelease(keyCode, event.downTime, releaseActionFor(action))
             return true
         }
         if (action == Action.LeftKey || action == Action.RightKey) {
@@ -518,22 +530,6 @@ class MainActivity : Activity() {
             Action.Down -> {
                 selectedIndex = (selectedIndex + 1) % slots.size
                 render()
-                return true
-            }
-            is Action.Digit -> {
-                val index = action.n - 1
-                if (index in slots.indices) {
-                    selectedIndex = index
-                    render()
-                    onSelect(index)
-                }
-                return true
-            }
-            Action.BrowseAll -> {
-                startActivity(
-                    Intent(this, AppPickerActivity::class.java)
-                        .putExtra(AppPickerActivity.EXTRA_LAUNCH_DIRECTLY, true)
-                )
                 return true
             }
             else -> {}
@@ -573,7 +569,54 @@ class MainActivity : Activity() {
         render()
     }
 
+    /** What a press of [action] does once released. A digit moves the selection right away (so
+     *  the press is visible) but only launches on release; a digit past the last slot does
+     *  nothing at all. */
+    private fun releaseActionFor(action: Action): (() -> Unit)? = when (action) {
+        Action.Select -> {
+            val index = selectedIndex
+            ({ onSelect(index) })
+        }
+        is Action.Digit -> {
+            val index = action.n - 1
+            if (index in slots.indices) {
+                selectedIndex = index
+                render()
+                ({ onSelect(index) })
+            } else {
+                null
+            }
+        }
+        Action.BrowseAll -> ({
+            startActivity(
+                Intent(this, AppPickerActivity::class.java)
+                    .putExtra(AppPickerActivity.EXTRA_LAUNCH_DIRECTLY, true)
+            )
+        })
+        else -> null
+    }
+
+    private fun armRelease(keyCode: Int, downTime: Long, action: (() -> Unit)?) {
+        pendingReleaseKeyCode = keyCode
+        pendingReleaseDownTime = downTime
+        pendingReleaseAction = action
+    }
+
+    private fun clearPendingRelease() {
+        pendingReleaseKeyCode = null
+        pendingReleaseDownTime = -1L
+        pendingReleaseAction = null
+    }
+
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == pendingReleaseKeyCode) {
+            // Only the release of the very press we saw go down — a key-up for a press that
+            // started elsewhere (e.g. OK held in a picker that finished first) must not act here.
+            val action = pendingReleaseAction.takeIf { event.downTime == pendingReleaseDownTime }
+            clearPendingRelease()
+            action?.invoke()
+            return true
+        }
         val speedDialDigit = digitFor(keyCode, event)
         if (speedDialDigit != null && pendingSpeedDialDigit == speedDialDigit) {
             cancelSpeedDialTimer()

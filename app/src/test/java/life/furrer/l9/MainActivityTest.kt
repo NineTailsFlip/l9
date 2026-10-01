@@ -63,16 +63,62 @@ class MainActivityTest {
     @Test
     fun `pressing the digit for an assigned slot launches its app`() {
         val activity = buildActivity()
-        down(activity, KeyEvent.KEYCODE_2)
+        tap(activity, KeyEvent.KEYCODE_2)
 
         val started = shadowOf(activity).nextStartedActivity
         assertEquals("b.pkg", started.component?.packageName)
     }
 
+    // The launched app must never receive the rest of the press: on-device, launching WhatsApp
+    // on key-down let its key-up reach WhatsApp's message field, where the IME typed "J".
+    @Test
+    fun `a digit launches on release, not while the key is still down`() {
+        val activity = buildActivity()
+        val press = down(activity, KeyEvent.KEYCODE_2)
+        down(activity, KeyEvent.KEYCODE_2, repeatCount = 1) // auto-repeat while held
+        assertNull(shadowOf(activity).nextStartedActivity)
+
+        activity.onKeyUp(KeyEvent.KEYCODE_2, KeyEvent(press.downTime, 5, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_2, 0))
+
+        assertEquals("b.pkg", shadowOf(activity).nextStartedActivity.component?.packageName)
+        assertNull(shadowOf(activity).nextStartedActivity)
+    }
+
+    @Test
+    fun `OK launches on release, not while the key is still down`() {
+        val activity = buildActivity()
+        val press = down(activity, KeyEvent.KEYCODE_DPAD_CENTER)
+        assertNull(shadowOf(activity).nextStartedActivity)
+
+        activity.onKeyUp(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.changeAction(press, KeyEvent.ACTION_UP))
+
+        assertEquals("a.pkg", shadowOf(activity).nextStartedActivity.component?.packageName)
+    }
+
+    @Test
+    fun `a key-up for a press L9 never saw go down launches nothing`() {
+        val activity = buildActivity()
+        activity.onKeyUp(KeyEvent.KEYCODE_2, KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_2, 0))
+        activity.onKeyUp(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER, 0))
+
+        assertNull(shadowOf(activity).nextStartedActivity)
+    }
+
+    @Test
+    fun `leaving L9 mid-press drops the pending launch`() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+        val press = down(activity, KeyEvent.KEYCODE_2)
+        controller.pause()
+        activity.onKeyUp(KeyEvent.KEYCODE_2, KeyEvent(press.downTime, 5, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_2, 0))
+
+        assertNull(shadowOf(activity).nextStartedActivity)
+    }
+
     @Test
     fun `pressing the digit for an empty slot opens the picker instead of launching`() {
         val activity = buildActivity()
-        down(activity, KeyEvent.KEYCODE_3)
+        tap(activity, KeyEvent.KEYCODE_3)
 
         val started = shadowOf(activity).nextStartedActivityForResult
         assertEquals(AppPickerActivity::class.java.name, started.intent.component?.className)
@@ -84,7 +130,7 @@ class MainActivityTest {
         val activity = buildActivity()
         down(activity, KeyEvent.KEYCODE_DPAD_UP)
         // Slot 3 (index 2) is empty, so confirming selection should open its picker.
-        down(activity, KeyEvent.KEYCODE_DPAD_CENTER)
+        tap(activity, KeyEvent.KEYCODE_DPAD_CENTER)
 
         val started = shadowOf(activity).nextStartedActivityForResult
         assertEquals(AppPickerActivity::class.java.name, started.intent.component?.className)
@@ -96,7 +142,7 @@ class MainActivityTest {
         down(activity, KeyEvent.KEYCODE_DPAD_DOWN)
         down(activity, KeyEvent.KEYCODE_DPAD_DOWN)
         down(activity, KeyEvent.KEYCODE_DPAD_DOWN)
-        down(activity, KeyEvent.KEYCODE_DPAD_CENTER)
+        tap(activity, KeyEvent.KEYCODE_DPAD_CENTER)
 
         val started = shadowOf(activity).nextStartedActivity
         assertEquals("a.pkg", started.component?.packageName)
@@ -105,7 +151,7 @@ class MainActivityTest {
     @Test
     fun `digit 0 opens browse-all directly, not slot 10`() {
         val activity = buildActivity()
-        down(activity, KeyEvent.KEYCODE_0)
+        tap(activity, KeyEvent.KEYCODE_0)
 
         val started = shadowOf(activity).nextStartedActivity
         assertEquals(AppPickerActivity::class.java.name, started.component?.className)
@@ -152,7 +198,7 @@ class MainActivityTest {
 
         tap(activity, KeyEvent.KEYCODE_STAR)
         // Now out of reorder mode: a digit press should launch normally instead of swapping.
-        down(activity, KeyEvent.KEYCODE_1)
+        tap(activity, KeyEvent.KEYCODE_1)
 
         val started = shadowOf(activity).nextStartedActivity
         assertEquals("a.pkg", started.component?.packageName)
