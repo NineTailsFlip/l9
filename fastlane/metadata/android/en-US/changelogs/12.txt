@@ -1,0 +1,4 @@
+- Speed dial now always needs the Call key: hold a digit, then press Call while holding or right after letting go. Letting go alone no longer places the call
+- Apps now launch when you let go of the key, so the rest of the key press no longer types into the newly opened app
+- The battery level turns green while charging
+- The manual's key mapping now describes the * menu, and its intro wraps to the screen width
