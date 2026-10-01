@@ -23,7 +23,7 @@ AutoName: L9
 
 RepoType: git
 Repo: https://git.sr.ht/~timofurrer/nine
-Binaries: https://nine.furrer.life/releases/l9/%v/l9-%v.apk
+Binaries: https://releases.nine.furrer.life/l9/%v/l9-%v.apk
 
 Builds:
   - versionName: 0.9.0
