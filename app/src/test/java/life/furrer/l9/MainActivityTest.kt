@@ -418,6 +418,21 @@ class MainActivityTest {
         NotificationRepository.hasNotifications = false
     }
 
+    @Test
+    fun `the notification dot hides as soon as the access setting changes, without leaving home`() {
+        val self = android.content.ComponentName(context, NotificationListener::class.java).flattenToString()
+        android.provider.Settings.Secure.putString(context.contentResolver, "enabled_notification_listeners", self)
+        NotificationRepository.hasNotifications = true
+        val activity = buildActivity()
+        assertEquals(android.view.View.VISIBLE, dotOf(activity).visibility)
+
+        android.provider.Settings.Secure.putString(context.contentResolver, "enabled_notification_listeners", "")
+        org.robolectric.shadows.ShadowLooper.idleMainLooper()
+
+        assertEquals(android.view.View.GONE, dotOf(activity).visibility)
+        NotificationRepository.hasNotifications = false
+    }
+
     private fun dotOf(activity: MainActivity): TextView = allTextViews(activity.findViewById(android.R.id.content)).first { it.text == "•" }
 
     private fun allTextViews(view: android.view.View): List<TextView> =

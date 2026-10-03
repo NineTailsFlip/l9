@@ -5,9 +5,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.database.ContentObserver
 import android.graphics.Color
 import android.graphics.Paint
 import android.net.Uri
+import android.provider.Settings
 import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Handler
@@ -115,6 +117,7 @@ class MainActivity : Activity() {
     private lateinit var calendarDivider: View
     private var batteryReceiver: BroadcastReceiver? = null
     private var notificationReceiver: BroadcastReceiver? = null
+    private var listenerAccessObserver: ContentObserver? = null
     private val rowViews = mutableListOf<View>()
     private val numberViews = mutableListOf<TextView>()
     private val labelViews = mutableListOf<TextView>()
@@ -322,6 +325,8 @@ class MainActivity : Activity() {
         batteryReceiver = null
         notificationReceiver?.let { unregisterReceiver(it) }
         notificationReceiver = null
+        listenerAccessObserver?.let { contentResolver.unregisterContentObserver(it) }
+        listenerAccessObserver = null
         cancelSpeedDialTimer()
         // Unlike pendingSpeedDialDigit below, pendingCallContact only exists after the digit has
         // already been released, so there's no held-key auto-repeat to preserve it for — drop it
@@ -378,6 +383,19 @@ class MainActivity : Activity() {
             }
         }
         notificationReceiver = receiver
+        // Revoking access doesn't reliably reach the listener service (it may stay bound), so
+        // the dot also watches the setting that grants it.
+        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                updateNotificationDot()
+            }
+        }
+        listenerAccessObserver = observer
+        contentResolver.registerContentObserver(
+            Settings.Secure.getUriFor("enabled_notification_listeners"),
+            false,
+            observer,
+        )
         registerReceiver(
             receiver,
             IntentFilter(NotificationRepository.ACTION_NOTIFICATIONS_CHANGED),
