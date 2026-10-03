@@ -24,9 +24,8 @@ private val l9App = NineApp(
             id = "",
             name = "L9",
             introText = """
-                L9 ("Launcher on 9 keys", an analogue to T9 "Text on 9 keys") is a minimal, all-black
-                home launcher built for keypad phones — a D-pad and a numeric keypad, no touchscreen
-                assumed.
+                L9 ("Launcher on 9 keys") is a minimal home launcher built for keypad phones — a D-pad
+                and a numeric keypad, no touchscreen assumed.
 
                 The home screen shows a fixed list of app slots, however many you configure in Settings.
                 Move the selection with Up/Down, press OK to launch. Each number key 1-9 jumps straight

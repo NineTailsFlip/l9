@@ -1,1 +1,1 @@
-Minimal all-black launcher for D-pad and T9 keypad phones
+Home screen launcher for D-pad and T9 keypad phones
