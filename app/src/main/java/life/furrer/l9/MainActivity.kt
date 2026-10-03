@@ -15,6 +15,7 @@ import android.os.Looper
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.TextUtils
+import android.text.format.DateFormat
 import android.text.style.ForegroundColorSpan
 import android.text.style.UnderlineSpan
 import android.view.Gravity
@@ -27,12 +28,9 @@ import android.widget.ScrollView
 import android.widget.TextClock
 import android.widget.TextView
 import android.widget.Toast
-import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.Date
-import java.util.Locale
 import life.furrer.nine.core.ui.MenuItem
 import life.furrer.nine.core.ui.MenuSheet
 import life.furrer.nine.core.ui.Palette
@@ -224,8 +222,8 @@ class MainActivity : Activity() {
     }
 
     private fun configureClock() {
-        clockView.format24Hour = "HH:mm"
-        clockView.format12Hour = null
+        clockView.format24Hour = ClockFormat.PATTERN_24
+        clockView.format12Hour = ClockFormat.PATTERN_12
     }
 
     private fun renderCalendar() {
@@ -241,13 +239,13 @@ class MainActivity : Activity() {
         // divider's symmetric margins the gap above and below it comes out equal.
         calendarContainer.setPadding(ROW_SIDE_PADDING, 0, ROW_SIDE_PADDING, 3)
         calendarDivider.visibility = if (AppRepository.getShowCalendarDivider(this)) View.VISIBLE else View.GONE
-        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val is24Hour = DateFormat.is24HourFormat(this)
         val zone = ZoneId.systemDefault()
         val tomorrow = LocalDate.now(zone).plusDays(1)
         val now = System.currentTimeMillis()
         events.forEach { event ->
-            val time = if (event.allDay) "All day" else timeFormat.format(Date(event.startMillis))
-            val isTomorrow = Instant.ofEpochMilli(event.startMillis).atZone(zone).toLocalDate() == tomorrow
+            val time = if (event.allDay) "All day" else ClockFormat.format(event.startMillis, is24Hour)
+            val isTomorrow = event.date == tomorrow
             // Query already excludes events that have ended, so "starts within the window" also
             // covers events that are already in progress.
             val isSoon = !event.allDay && event.startMillis <= now + SOON_WINDOW_MILLIS
