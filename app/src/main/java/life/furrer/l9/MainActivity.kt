@@ -39,10 +39,13 @@ import life.furrer.nine.core.ui.hideStatusBar
 import life.furrer.nine.core.ui.recreateIfFontChanged
 import life.furrer.nine.core.util.KeyRouter
 import life.furrer.nine.core.util.NineAction
+import life.furrer.nine.core.util.Reloader
 
 private const val SOON_WINDOW_MILLIS = 30 * 60 * 1000L
 private const val LOW_BATTERY_THRESHOLD = 20
 private const val REQUEST_PICK_APP = 1
+private const val STATE_PENDING_TARGET = "pending_target"
+private const val STATE_PENDING_SLOT = "pending_slot"
 private const val INDEX_COLUMN_WIDTH = 104
 private const val ROW_SIDE_PADDING = 28
 private const val DIVIDER_GREY = 0xFF333333.toInt()
@@ -91,6 +94,7 @@ class MainActivity : Activity() {
     private var selectedIndex: Int = 0
     private var pendingTarget = PendingTarget.NONE
     private var pendingSlotIndex: Int = -1
+    private var keepSelectionOnResume = false
     private var sideLongPressHandled = false
     private var pendingSideKeyCode: Int? = null
     private var reorderModeActive = false
@@ -142,6 +146,12 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         appliedMonospaceFont = applyConfiguredTheme()
+        // The picker's result can arrive after this activity was recreated (process death, a
+        // configuration change while the picker was open), so what it was picking for comes back.
+        savedInstanceState?.let {
+            pendingTarget = PendingTarget.values().getOrElse(it.getInt(STATE_PENDING_TARGET, 0)) { PendingTarget.NONE }
+            pendingSlotIndex = it.getInt(STATE_PENDING_SLOT, -1)
+        }
 
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -202,6 +212,12 @@ class MainActivity : Activity() {
         hideStatusBar()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(STATE_PENDING_TARGET, pendingTarget.ordinal)
+        outState.putInt(STATE_PENDING_SLOT, pendingSlotIndex)
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) hideStatusBar()
@@ -211,9 +227,12 @@ class MainActivity : Activity() {
         super.onResume()
         if (recreateIfFontChanged(appliedMonospaceFont)) return
         configureClock()
-        renderCalendar()
+        calendarLoader.request()
         slots = AppRepository.loadSlots(this)
-        selectedIndex = 0
+        // Coming back from the app picker keeps the highlight on the slot just linked; any other
+        // return to home starts at the top.
+        selectedIndex = if (keepSelectionOnResume) selectedIndex.coerceIn(0, (slots.size - 1).coerceAtLeast(0)) else 0
+        keepSelectionOnResume = false
         reorderModeActive = false
         buildRows()
         render()
@@ -226,10 +245,18 @@ class MainActivity : Activity() {
         clockView.format12Hour = ClockFormat.PATTERN_12
     }
 
-    private fun renderCalendar() {
+    // The provider query runs off the main thread (Reloader coalesces repeated resumes into at
+    // most one load in flight). A result that lands after the activity is gone is dropped.
+    private val calendarLoader = Reloader(
+        background = {
+            val entryCount = CalendarRepository.getEntryCount(this)
+            if (entryCount > 0) CalendarRepository.queryUpcomingEvents(this, entryCount) else emptyList()
+        },
+        onResult = { events -> if (!isDestroyed) renderCalendar(events) },
+    )
+
+    private fun renderCalendar(events: List<CalendarEventEntry>) {
         calendarContainer.removeAllViews()
-        val entryCount = CalendarRepository.getEntryCount(this)
-        val events = if (entryCount > 0) CalendarRepository.queryUpcomingEvents(this, entryCount) else emptyList()
         if (events.isEmpty()) {
             calendarContainer.setPadding(0, 0, 0, 0)
             calendarDivider.visibility = View.GONE
@@ -359,7 +386,10 @@ class MainActivity : Activity() {
     }
 
     private fun updateNotificationDot() {
-        notificationDot.visibility = if (NotificationRepository.hasNotifications) View.VISIBLE else View.GONE
+        // The listener's last state is only trustworthy while access is still granted; once it is
+        // revoked nothing updates it again, so the dot would otherwise outlive the permission.
+        val show = NotificationRepository.hasNotifications && NotificationRepository.isListenerEnabled(this)
+        notificationDot.visibility = if (show) View.VISIBLE else View.GONE
     }
 
     private fun buildRows() {
@@ -802,7 +832,9 @@ class MainActivity : Activity() {
         pendingTarget = target
         val current = if (target == PendingTarget.LEFT) AppRepository.getLeftApp(this) else AppRepository.getRightApp(this)
         startActivityForResult(
-            Intent(this, AppPickerActivity::class.java).putExtra(AppPickerActivity.EXTRA_ALLOW_CLEAR, current != null),
+            Intent(this, AppPickerActivity::class.java)
+                .putExtra(AppPickerActivity.EXTRA_ALLOW_CLEAR, current != null)
+                .putExtra(AppPickerActivity.EXTRA_CLEAR_LABEL, "Clear this shortcut"),
             REQUEST_PICK_APP,
         )
     }
@@ -821,14 +853,19 @@ class MainActivity : Activity() {
             }
             when (pendingTarget) {
                 PendingTarget.SLOT -> if (pendingSlotIndex >= 0) {
-                    val updated = slots.toMutableList()
-                    updated[pendingSlotIndex] = entry
+                    // Read from storage, not the in-memory list: after a recreation this runs
+                    // before onResume has loaded anything, and saving an empty list would wipe
+                    // every slot.
+                    val updated = AppRepository.loadSlots(this).toMutableList()
+                    if (pendingSlotIndex < updated.size) updated[pendingSlotIndex] = entry
                     AppRepository.saveSlots(this, updated)
                     // Reloaded rather than just using `updated` directly so a freshly linked app
                     // that already has a global rename/hidden override picks it up immediately,
                     // the same as AppPickerActivity's own list already does.
                     slots = AppRepository.loadSlots(this)
-                    render()
+                    selectedIndex = pendingSlotIndex
+                    keepSelectionOnResume = true
+                    if (rowViews.isNotEmpty()) render()
                 }
                 PendingTarget.LEFT -> AppRepository.setLeftApp(this, entry)
                 PendingTarget.RIGHT -> AppRepository.setRightApp(this, entry)

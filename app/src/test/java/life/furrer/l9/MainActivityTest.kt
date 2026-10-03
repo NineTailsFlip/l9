@@ -356,4 +356,72 @@ class MainActivityTest {
         activity.onKeyUp(KeyEvent.KEYCODE_DPAD_LEFT, event)
         assertNull(shadowOf(activity).nextStartedActivity)
     }
+
+    private fun pickResult(pkg: String = "c.pkg") = android.content.Intent()
+        .putExtra(AppPickerActivity.EXTRA_PACKAGE_NAME, pkg)
+        .putExtra(AppPickerActivity.EXTRA_ACTIVITY_NAME, "$pkg.Activity")
+        .putExtra(AppPickerActivity.EXTRA_LABEL, "App C")
+
+    @Test
+    fun `linking an app keeps the highlight on that slot`() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+        tap(activity, KeyEvent.KEYCODE_3) // empty slot: opens the picker
+        val request = shadowOf(activity).nextStartedActivityForResult
+
+        controller.pause()
+        shadowOf(activity).receiveResult(request.intent, android.app.Activity.RESULT_OK, pickResult())
+        controller.resume()
+
+        val field = MainActivity::class.java.getDeclaredField("selectedIndex").apply { isAccessible = true }
+        assertEquals(2, field.getInt(activity))
+        assertEquals("c.pkg", AppRepository.loadSlots(context)[2]?.packageName)
+    }
+
+    @Test
+    fun `an app picked while home was being recreated is not lost`() {
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        tap(controller.get(), KeyEvent.KEYCODE_3)
+        val request = shadowOf(controller.get()).nextStartedActivityForResult
+
+        controller.recreate()
+        shadowOf(controller.get()).receiveResult(request.intent, android.app.Activity.RESULT_OK, pickResult())
+
+        val slots = AppRepository.loadSlots(context)
+        assertEquals(listOf("a.pkg", "b.pkg", "c.pkg"), slots.map { it?.packageName })
+    }
+
+    @Test
+    fun `the Left and Right pickers call their clear row a shortcut, not a slot`() {
+        AppRepository.setLeftApp(context, appA)
+        val activity = buildActivity()
+        val event = down(activity, KeyEvent.KEYCODE_DPAD_LEFT)
+        activity.onKeyLongPress(KeyEvent.KEYCODE_DPAD_LEFT, event)
+
+        val started = shadowOf(activity).nextStartedActivityForResult
+        assertEquals("Clear this shortcut", started.intent.getStringExtra(AppPickerActivity.EXTRA_CLEAR_LABEL))
+    }
+
+    @Test
+    fun `the notification dot goes away when listener access is revoked`() {
+        val self = android.content.ComponentName(context, NotificationListener::class.java).flattenToString()
+        android.provider.Settings.Secure.putString(context.contentResolver, "enabled_notification_listeners", self)
+        NotificationRepository.hasNotifications = true
+        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
+        val activity = controller.get()
+        assertEquals(android.view.View.VISIBLE, dotOf(activity).visibility)
+
+        android.provider.Settings.Secure.putString(context.contentResolver, "enabled_notification_listeners", "")
+        controller.pause().resume()
+
+        assertEquals(android.view.View.GONE, dotOf(activity).visibility)
+        NotificationRepository.hasNotifications = false
+    }
+
+    private fun dotOf(activity: MainActivity): TextView = allTextViews(activity.findViewById(android.R.id.content)).first { it.text == "•" }
+
+    private fun allTextViews(view: android.view.View): List<TextView> =
+        if (view is TextView) listOf(view)
+        else if (view is android.view.ViewGroup) (0 until view.childCount).flatMap { allTextViews(view.getChildAt(it)) }
+        else emptyList()
 }

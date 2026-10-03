@@ -12,6 +12,11 @@ class NotificationListener : NotificationListenerService() {
         updateState()
     }
 
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        publish(false)
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         updateState()
     }
@@ -24,6 +29,10 @@ class NotificationListener : NotificationListenerService() {
         val hasVisibleNotification = activeNotifications?.any { sbn ->
             sbn.notification.flags and Notification.FLAG_ONGOING_EVENT == 0
         } ?: false
+        publish(hasVisibleNotification)
+    }
+
+    private fun publish(hasVisibleNotification: Boolean) {
         NotificationRepository.hasNotifications = hasVisibleNotification
         sendBroadcast(Intent(NotificationRepository.ACTION_NOTIFICATIONS_CHANGED).setPackage(packageName))
     }

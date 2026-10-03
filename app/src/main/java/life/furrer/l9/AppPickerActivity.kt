@@ -171,7 +171,7 @@ class AppPickerActivity : Activity() {
         rowIsHidden.clear()
 
         if (allowClear) {
-            addPseudoRow("Clear this slot")
+            addPseudoRow(intent.getStringExtra(EXTRA_CLEAR_LABEL) ?: "Clear this slot")
         }
 
         val fontSize = AppRepository.getBrowseFontSize(this).toFloat()
@@ -379,6 +379,8 @@ class AppPickerActivity : Activity() {
         const val EXTRA_LABEL = "label"
         const val EXTRA_LAUNCH_DIRECTLY = "launch_directly"
         const val EXTRA_ALLOW_CLEAR = "allow_clear"
+        /** What the clear row says; the default fits a numbered slot, the Left/Right shortcuts pass their own. */
+        const val EXTRA_CLEAR_LABEL = "clear_label"
         const val EXTRA_CLEAR = "clear"
     }
 }
