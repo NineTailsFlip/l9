@@ -1,0 +1,1 @@
+- The manual's key mapping no longer breaks key names like "Reorder" in the middle of a word
