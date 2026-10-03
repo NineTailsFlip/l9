@@ -23,8 +23,8 @@ android {
         applicationId = "life.furrer.l9"
         minSdk = 34
         targetSdk = 34
-        versionCode = 13
-        versionName = "0.9.1"
+        versionCode = 14
+        versionName = "0.10.0"
     }
 
     if (hasKeystore) {

@@ -1,0 +1,5 @@
+- Clock and agenda times follow the system 12h/24h setting
+- All-day events show on the right day in every time zone
+- The calendar loads in the background
+- A picked app is no longer lost if home is recreated, and the highlight stays on the slot you just linked
+- The notification dot goes away when access is revoked
