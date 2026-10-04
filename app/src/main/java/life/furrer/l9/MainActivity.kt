@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.database.ContentObserver
 import android.graphics.Color
 import android.graphics.Paint
 import android.net.Uri
@@ -43,6 +42,7 @@ import life.furrer.nine.core.ui.hideStatusBar
 import life.furrer.nine.core.ui.recreateIfFontChanged
 import life.furrer.nine.core.util.KeyRouter
 import life.furrer.nine.core.util.NineAction
+import life.furrer.nine.core.util.ProviderWatcher
 import life.furrer.nine.core.util.Reloader
 
 private const val SOON_WINDOW_MILLIS = 30 * 60 * 1000L
@@ -118,7 +118,13 @@ class MainActivity : Activity() {
     private lateinit var calendarDivider: View
     private var batteryReceiver: BroadcastReceiver? = null
     private var notificationReceiver: BroadcastReceiver? = null
-    private var listenerAccessObserver: ContentObserver? = null
+    // Revoking notification access doesn't reliably reach the listener service (it may stay
+    // bound), so the dot also watches the setting that grants it.
+    private val listenerAccessWatcher = ProviderWatcher(
+        this,
+        Settings.Secure.getUriFor("enabled_notification_listeners"),
+        notifyForDescendants = false,
+    ) { updateNotificationDot() }
     private val rowViews = mutableListOf<View>()
     private val numberViews = mutableListOf<TextView>()
     private val labelViews = mutableListOf<TextView>()
@@ -326,8 +332,7 @@ class MainActivity : Activity() {
         batteryReceiver = null
         notificationReceiver?.let { unregisterReceiver(it) }
         notificationReceiver = null
-        listenerAccessObserver?.let { contentResolver.unregisterContentObserver(it) }
-        listenerAccessObserver = null
+        listenerAccessWatcher.stop()
         cancelSpeedDialTimer()
         // Unlike pendingSpeedDialDigit below, pendingCallContact only exists after the digit has
         // already been released, so there's no held-key auto-repeat to preserve it for — drop it
@@ -384,19 +389,7 @@ class MainActivity : Activity() {
             }
         }
         notificationReceiver = receiver
-        // Revoking access doesn't reliably reach the listener service (it may stay bound), so
-        // the dot also watches the setting that grants it.
-        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) {
-                updateNotificationDot()
-            }
-        }
-        listenerAccessObserver = observer
-        contentResolver.registerContentObserver(
-            Settings.Secure.getUriFor("enabled_notification_listeners"),
-            false,
-            observer,
-        )
+        listenerAccessWatcher.start()
         registerReceiver(
             receiver,
             IntentFilter(NotificationRepository.ACTION_NOTIFICATIONS_CHANGED),
