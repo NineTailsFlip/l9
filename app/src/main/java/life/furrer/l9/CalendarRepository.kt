@@ -9,6 +9,9 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
+import life.furrer.nine.core.util.long
+import life.furrer.nine.core.util.mapRows
+import life.furrer.nine.core.util.stringOr
 import org.json.JSONArray
 
 data class CalendarInfo(val id: Long, val displayName: String)
@@ -58,19 +61,12 @@ object CalendarRepository {
             CalendarContract.Calendars._ID,
             CalendarContract.Calendars.CALENDAR_DISPLAY_NAME,
         )
-        val result = mutableListOf<CalendarInfo>()
-        context.contentResolver.query(CalendarContract.Calendars.CONTENT_URI, projection, null, null, null)
-            ?.use { cursor ->
-                val idIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars._ID)
-                val nameIndex = cursor.getColumnIndexOrThrow(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME)
-                while (cursor.moveToNext()) {
-                    result.add(
-                        CalendarInfo(
-                            id = cursor.getLong(idIndex),
-                            displayName = cursor.getString(nameIndex) ?: "Calendar",
-                        )
-                    )
-                }
+        val result = context.contentResolver.query(CalendarContract.Calendars.CONTENT_URI, projection, null, null, null)
+            .mapRows {
+                CalendarInfo(
+                    id = it.long(CalendarContract.Calendars._ID),
+                    displayName = it.stringOr(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME, "Calendar"),
+                )
             }
         return result.sortedBy { it.displayName.lowercase() }
     }
