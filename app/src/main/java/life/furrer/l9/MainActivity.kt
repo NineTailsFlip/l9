@@ -537,7 +537,7 @@ class MainActivity : NineActivity() {
             // Deferred to onKeyUp/the hold timer: a bare tap opens the menu, but only once we
             // know it wasn't actually a long-press for Settings, so short-press behavior can't be
             // decided on key-down. Auto-repeat must not re-arm the timer.
-            if (event.repeatCount == 0) starKey.onDown()
+            starKey.onDown(event.repeatCount)
             return true
         }
         val action = homeAction(keyCode, event.number)
