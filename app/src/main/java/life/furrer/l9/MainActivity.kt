@@ -33,6 +33,8 @@ import android.widget.Toast
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import life.furrer.nine.core.settings.openNineSettings
+import life.furrer.nine.core.ui.LongPressKey
 import life.furrer.nine.core.ui.MenuItem
 import life.furrer.nine.core.ui.MenuSheet
 import life.furrer.nine.core.ui.Palette
@@ -103,10 +105,9 @@ class MainActivity : Activity() {
     private var appliedMonospaceFont = false
 
     // Star key: short tap opens menuSheet (Link app/Rename/Reorder/Settings); long-press jumps
-    // straight into Settings instead. Tracked the same "start on DOWN, decide on UP unless the
-    // long-press already fired" way as the side keys below.
-    private var pendingStarKeyCode: Int? = null
-    private var starLongPressHandled = false
+    // straight into Settings instead. Decided on UP unless the hold already fired, by core's
+    // [LongPressKey] — which also only acts on an UP whose DOWN it saw (see onPause).
+    private val starKey = LongPressKey(::openMenu) { openNineSettings() }
     private lateinit var menuSheet: MenuSheet
     private lateinit var rowContainer: LinearLayout
     private lateinit var scrollView: ScrollView
@@ -346,7 +347,7 @@ class MainActivity : Activity() {
         // finishes before the physical key is released. Drop any in-flight tracking so a
         // stray key-up on resume can't be mistaken for a real press we witnessed.
         pendingSideKeyCode = null
-        pendingStarKeyCode = null
+        starKey.reset()
         clearPendingRelease()
     }
 
@@ -550,11 +551,10 @@ class MainActivity : Activity() {
             }
         }
         if (keyCode == KeyEvent.KEYCODE_STAR) {
-            // Deferred to onKeyUp/onKeyLongPress: a bare tap opens the menu, but only once we
+            // Deferred to onKeyUp/the hold timer: a bare tap opens the menu, but only once we
             // know it wasn't actually a long-press for Settings, so short-press behavior can't be
-            // decided on key-down.
-            event.startTracking()
-            pendingStarKeyCode = keyCode
+            // decided on key-down. Auto-repeat must not re-arm the timer.
+            if (event.repeatCount == 0) starKey.onDown()
             return true
         }
         val action = homeAction(keyCode, event.number)
@@ -692,14 +692,10 @@ class MainActivity : Activity() {
             return true
         }
         if (keyCode == KeyEvent.KEYCODE_STAR) {
-            // Only act if this activity actually witnessed the matching key-down — a stray
+            // Only acts if this activity actually witnessed the matching key-down — a stray
             // key-up can otherwise arrive here for a press this activity never saw start (see
             // onPause for the general explanation of this class of race).
-            if (pendingStarKeyCode == keyCode && !starLongPressHandled) {
-                openMenu()
-            }
-            starLongPressHandled = false
-            pendingStarKeyCode = null
+            starKey.onUp()
             return true
         }
         val action = homeAction(keyCode, event.number)
@@ -757,11 +753,6 @@ class MainActivity : Activity() {
     }
 
     override fun onKeyLongPress(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_STAR) {
-            starLongPressHandled = true
-            startActivity(Intent(this, SettingsActivity::class.java))
-            return true
-        }
         val action = homeAction(keyCode, event.number)
         if (action == Action.LeftKey || action == Action.RightKey) {
             sideLongPressHandled = true
@@ -786,7 +777,7 @@ class MainActivity : Activity() {
             reorderModeActive = true
             render()
         }
-        items += MenuItem("Settings") { startActivity(Intent(this, SettingsActivity::class.java)) }
+        items += MenuItem("Settings") { openNineSettings() }
         menuSheet.show(items)
     }
 

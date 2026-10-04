@@ -13,6 +13,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import life.furrer.nine.core.settings.openNineSettings
 import life.furrer.nine.core.ui.MenuItem
 import life.furrer.nine.core.ui.MenuSheet
 import life.furrer.nine.core.ui.Palette
@@ -331,7 +332,7 @@ class AppPickerActivity : Activity() {
     }
 
     private fun openL9Settings() {
-        startActivity(Intent(this, SettingsActivity::class.java))
+        openNineSettings()
         finish()
     }
 

@@ -1,11 +1,14 @@
 package life.furrer.l9
 
+import android.os.Looper
 import android.view.KeyEvent
+import android.view.ViewConfiguration
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import life.furrer.nine.core.ui.MenuSheet
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -207,14 +210,43 @@ class MainActivityTest {
     }
 
 
+    // `*`'s hold is core's LongPressKey: a Handler callback posted on DOWN, so advancing the
+    // paused main looper past the long-press timeout is what fires it.
+    private fun holdPastLongPressTimeout() {
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ViewConfiguration.getLongPressTimeout() + 50L))
+    }
+
     @Test
     fun `long-pressing star opens Settings`() {
         val activity = buildActivity()
         val event = down(activity, KeyEvent.KEYCODE_STAR)
-        activity.onKeyLongPress(KeyEvent.KEYCODE_STAR, event)
+        holdPastLongPressTimeout()
+        activity.onKeyUp(KeyEvent.KEYCODE_STAR, event)
 
         val started = shadowOf(activity).nextStartedActivity
         assertEquals(SettingsActivity::class.java.name, started.component?.className)
+        assertNull(shadowOf(activity).nextStartedActivity)
+        assertFalse(menuSheetOf(activity).isShowing)
+    }
+
+    @Test
+    fun `star auto-repeat while held doesn't re-arm the hold`() {
+        val activity = buildActivity()
+        val event = down(activity, KeyEvent.KEYCODE_STAR)
+        holdPastLongPressTimeout()
+        down(activity, KeyEvent.KEYCODE_STAR, repeatCount = 1)
+        holdPastLongPressTimeout()
+        activity.onKeyUp(KeyEvent.KEYCODE_STAR, event)
+
+        assertEquals(SettingsActivity::class.java.name, shadowOf(activity).nextStartedActivity.component?.className)
+        assertNull(shadowOf(activity).nextStartedActivity)
+    }
+
+    @Test
+    fun `a star key-up without its key-down does nothing`() {
+        val activity = buildActivity()
+        activity.onKeyUp(KeyEvent.KEYCODE_STAR, KeyEvent(0, 0, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_STAR, 0))
+        assertFalse(menuSheetOf(activity).isShowing)
     }
 
     /** Simulates holding [keyCode] down and releasing it [heldMillis] later — separate from the
