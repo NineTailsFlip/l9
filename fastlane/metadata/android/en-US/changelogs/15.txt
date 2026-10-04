@@ -1,0 +1,3 @@
+- Holding * opens Settings once; the release no longer also counts as a tap
+- Holding OK or a number to choose a menu entry no longer types into the screen behind it
+- Importing settings with a different font applies it right away
