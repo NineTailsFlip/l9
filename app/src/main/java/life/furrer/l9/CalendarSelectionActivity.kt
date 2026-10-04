@@ -1,7 +1,6 @@
 package life.furrer.l9
 
 import android.Manifest
-import android.app.Activity
 import android.graphics.Color
 import android.graphics.Paint
 import android.os.Bundle
@@ -10,16 +9,15 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import life.furrer.nine.core.ui.NineActivity
 import life.furrer.nine.core.ui.Palette
-import life.furrer.nine.core.ui.applyConfiguredTheme
-import life.furrer.nine.core.ui.hideStatusBar
 import life.furrer.nine.core.util.KeyRouter
 import life.furrer.nine.core.util.NineAction
 
 private const val ROW_SIDE_PADDING = 28
 private const val REQUEST_CALENDAR_PERMISSION = 100
 
-class CalendarSelectionActivity : Activity() {
+class CalendarSelectionActivity : NineActivity() {
 
     private var calendars: List<CalendarInfo> = emptyList()
     private var selected: MutableSet<Long> = mutableSetOf()
@@ -30,7 +28,6 @@ class CalendarSelectionActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyConfiguredTheme()
 
         rowContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         scrollView = ScrollView(this).apply {
@@ -40,7 +37,6 @@ class CalendarSelectionActivity : Activity() {
             descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
         }
         setContentView(scrollView)
-        hideStatusBar()
 
         if (CalendarRepository.hasPermission(this)) {
             loadCalendars()
@@ -49,11 +45,6 @@ class CalendarSelectionActivity : Activity() {
         }
         buildRows()
         render()
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) hideStatusBar()
     }
 
     override fun onRequestPermissionsResult(

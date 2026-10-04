@@ -16,10 +16,9 @@ import android.widget.Toast
 import life.furrer.nine.core.settings.openNineSettings
 import life.furrer.nine.core.ui.MenuItem
 import life.furrer.nine.core.ui.MenuSheet
+import life.furrer.nine.core.ui.NineActivity
 import life.furrer.nine.core.ui.Palette
 import life.furrer.nine.core.ui.SearchField
-import life.furrer.nine.core.ui.applyConfiguredTheme
-import life.furrer.nine.core.ui.hideStatusBar
 import life.furrer.nine.core.ui.relaunch
 import life.furrer.nine.core.util.KeyRouter
 import life.furrer.nine.core.util.NineAction
@@ -43,7 +42,7 @@ private fun matchesSearch(label: String, query: String): Boolean {
     return words.any { it.startsWith(query.lowercase()) }
 }
 
-class AppPickerActivity : Activity() {
+class AppPickerActivity : NineActivity() {
 
     private var apps: List<AppEntry> = emptyList()
     private var visibleApps: List<AppEntry> = emptyList()
@@ -74,7 +73,6 @@ class AppPickerActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyConfiguredTheme()
 
         launchDirectly = intent.getBooleanExtra(EXTRA_LAUNCH_DIRECTLY, false)
         allowClear = intent.getBooleanExtra(EXTRA_ALLOW_CLEAR, false)
@@ -130,7 +128,6 @@ class AppPickerActivity : Activity() {
             addView(menuSheet, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
         setContentView(root)
-        hideStatusBar()
 
         rebuildRows()
     }
@@ -143,10 +140,7 @@ class AppPickerActivity : Activity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) {
-            searchField.onWindowFocusGained()
-            hideStatusBar()
-        }
+        if (hasFocus) searchField.onWindowFocusGained()
     }
 
     /** [SearchField.onDeactivated]'s escape from the captured `*`/`#` — see [relaunch]. */

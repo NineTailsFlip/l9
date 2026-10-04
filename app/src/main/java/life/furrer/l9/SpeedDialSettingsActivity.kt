@@ -1,7 +1,6 @@
 package life.furrer.l9
 
 import android.Manifest
-import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -14,9 +13,8 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import life.furrer.nine.core.ui.NineActivity
 import life.furrer.nine.core.ui.Palette
-import life.furrer.nine.core.ui.applyConfiguredTheme
-import life.furrer.nine.core.ui.hideStatusBar
 import life.furrer.nine.core.util.KeyRouter
 import life.furrer.nine.core.util.NineAction
 
@@ -24,7 +22,7 @@ private const val ROW_SIDE_PADDING = 28
 private const val REQUEST_CALL_PERMISSION = 200
 private const val REQUEST_PICK_CONTACT = 201
 
-class SpeedDialSettingsActivity : Activity() {
+class SpeedDialSettingsActivity : NineActivity() {
 
     private val digits = listOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 0)
     private var contacts: Map<Int, SpeedDialContact> = emptyMap()
@@ -37,7 +35,6 @@ class SpeedDialSettingsActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyConfiguredTheme()
 
         rowContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         scrollView = ScrollView(this).apply {
@@ -47,7 +44,6 @@ class SpeedDialSettingsActivity : Activity() {
             descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
         }
         setContentView(scrollView)
-        hideStatusBar()
 
         digits.forEach { _ ->
             val row = TextView(this).apply {
@@ -67,11 +63,6 @@ class SpeedDialSettingsActivity : Activity() {
         super.onResume()
         contacts = SpeedDialRepository.loadContacts(this)
         render()
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) hideStatusBar()
     }
 
     override fun onPause() {

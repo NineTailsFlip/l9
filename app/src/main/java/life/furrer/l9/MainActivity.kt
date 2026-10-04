@@ -1,6 +1,5 @@
 package life.furrer.l9
 
-import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -36,9 +35,8 @@ import life.furrer.nine.core.settings.openNineSettings
 import life.furrer.nine.core.ui.LongPressKey
 import life.furrer.nine.core.ui.MenuItem
 import life.furrer.nine.core.ui.MenuSheet
+import life.furrer.nine.core.ui.NineActivity
 import life.furrer.nine.core.ui.Palette
-import life.furrer.nine.core.ui.applyConfiguredTheme
-import life.furrer.nine.core.ui.hideStatusBar
 import life.furrer.nine.core.ui.recreateIfFontChanged
 import life.furrer.nine.core.util.KeyRouter
 import life.furrer.nine.core.util.NineAction
@@ -90,7 +88,7 @@ private fun homeAction(keyCode: Int, number: Char): Action? = when (val action =
     else -> null
 }
 
-class MainActivity : Activity() {
+class MainActivity : NineActivity() {
 
     private enum class PendingTarget { NONE, SLOT, LEFT, RIGHT }
 
@@ -102,7 +100,6 @@ class MainActivity : Activity() {
     private var sideLongPressHandled = false
     private var pendingSideKeyCode: Int? = null
     private var reorderModeActive = false
-    private var appliedMonospaceFont = false
 
     // Star key: short tap opens menuSheet (Link app/Rename/Reorder/Settings); long-press jumps
     // straight into Settings instead. Decided on UP unless the hold already fired, by core's
@@ -155,7 +152,6 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        appliedMonospaceFont = applyConfiguredTheme()
         // The picker's result can arrive after this activity was recreated (process death, a
         // configuration change while the picker was open), so what it was picking for comes back.
         savedInstanceState?.let {
@@ -219,18 +215,12 @@ class MainActivity : Activity() {
             addView(menuSheet, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
         setContentView(root)
-        hideStatusBar()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt(STATE_PENDING_TARGET, pendingTarget.ordinal)
         outState.putInt(STATE_PENDING_SLOT, pendingSlotIndex)
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) hideStatusBar()
     }
 
     override fun onResume() {
