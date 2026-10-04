@@ -20,6 +20,7 @@ import life.furrer.nine.core.ui.Palette
 import life.furrer.nine.core.ui.SearchField
 import life.furrer.nine.core.ui.applyConfiguredTheme
 import life.furrer.nine.core.ui.hideStatusBar
+import life.furrer.nine.core.ui.relaunch
 import life.furrer.nine.core.util.KeyRouter
 import life.furrer.nine.core.util.NineAction
 
@@ -83,7 +84,7 @@ class AppPickerActivity : Activity() {
             onQueryChanged = { rebuildRows() }
             // finish()+a fresh startActivity is the only thing confirmed to release this
             // device's T9 IME's grip on `*` once the search field has taken real focus (see
-            // SearchField.onDeactivated's own doc comment) — but that would silently cancel the
+            // core's relaunch() doc comment) — but that would silently cancel the
             // link picker's pending activity-for-result contract (MainActivity would see a
             // RESULT_CANCELED the moment the user backspaced their query to empty, not just when
             // they actually backed out). Browse all is a plain startActivity with no result owed
@@ -148,15 +149,9 @@ class AppPickerActivity : Activity() {
         }
     }
 
-    /** Not a visible flicker (overridePendingTransition(0, 0) on both ends) — see
-     *  [SearchField.onDeactivated]'s own doc comment for why an in-place recreate() or just
-     *  clearing view focus don't work, confirmed on-device, and only a genuinely fresh
-     *  Activity/window does. */
+    /** [SearchField.onDeactivated]'s escape from the captured `*`/`#` — see [relaunch]. */
     private fun restartFresh() {
-        finish()
-        overridePendingTransition(0, 0)
-        startActivity(Intent(this, AppPickerActivity::class.java).putExtra(EXTRA_LAUNCH_DIRECTLY, true))
-        overridePendingTransition(0, 0)
+        relaunch(Intent(this, AppPickerActivity::class.java).putExtra(EXTRA_LAUNCH_DIRECTLY, true))
     }
 
     private fun rebuildRows() {

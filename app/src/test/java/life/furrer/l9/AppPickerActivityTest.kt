@@ -251,7 +251,7 @@ class AppPickerActivityTest {
     fun `clearing the search back to empty in launch-directly mode restarts fresh, releasing the IME's grip on star`() {
         // Confirmed on-device: this hardware's T9 IME swallows `*` once the search field has
         // taken real focus, and neither clearing view focus nor Activity.recreate() releases it —
-        // only a genuinely fresh Activity/window does (SearchField.onDeactivated's own doc
+        // only a genuinely fresh Activity/window does (core's relaunch() doc
         // comment). Browse all (launchDirectly) is a plain startActivity with no result owed to
         // anyone, so it's safe to restart.
         val activity = buildActivity(launchDirectly = true)
