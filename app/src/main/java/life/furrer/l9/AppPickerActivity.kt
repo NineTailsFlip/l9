@@ -70,12 +70,6 @@ class AppPickerActivity : Activity() {
      *  tracking, since `*` is handled before ever reaching it (see dispatchKeyEvent). */
     private val seenKeyDowns = mutableSetOf<Int>()
 
-    // Selecting a menu item via OK/a digit closes the sheet as a side effect of handling that same
-    // key's ACTION_DOWN (see the `menuSheet.isShowing` branch in dispatchKeyEvent) — so the
-    // matching ACTION_UP must be swallowed here too, the same shape as ContactsActivity's own
-    // menuConsumedKeyUp.
-    private var menuConsumedKeyUp: Int? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyConfiguredTheme()
@@ -233,17 +227,7 @@ class AppPickerActivity : Activity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (menuSheet.isShowing) {
-            if (event.action == KeyEvent.ACTION_DOWN) {
-                menuSheet.handleKeyDown(event.keyCode, event)
-                menuConsumedKeyUp = event.keyCode
-            }
-            return true
-        }
-        if (event.action == KeyEvent.ACTION_UP && event.keyCode == menuConsumedKeyUp) {
-            menuConsumedKeyUp = null
-            return true
-        }
+        if (menuSheet.interceptKeyEvent(event)) return true
         if (event.keyCode == KeyEvent.KEYCODE_BACK) {
             if (searchField.handleBack(event) { super.dispatchKeyEvent(it) }) return true
             if (event.action == KeyEvent.ACTION_DOWN) {
