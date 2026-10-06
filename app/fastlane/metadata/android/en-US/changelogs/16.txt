@@ -1,0 +1,1 @@
+- Smaller and faster: the app is now optimized at build time
