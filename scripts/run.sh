@@ -2,11 +2,11 @@
 # Build, install, launch, and tail logs for the connected phone.
 set -euo pipefail
 
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/.."
 
 export ANDROID_HOME=/opt/android-sdk
 
-./gradlew :l9:app:installDebug
+./gradlew :app:installDebug
 
 adb shell am force-stop life.furrer.l9
 adb shell am start -n life.furrer.l9/.MainActivity
