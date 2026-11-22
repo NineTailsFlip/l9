@@ -20,5 +20,7 @@ rootProject.name = "l9"
 // git submodule update --init), unchanged from upstream ~timofurrer/nine.
 include(":core")
 project(":core").projectDir = file("nine-core/core")
+include(":update")
+project(":update").projectDir = file("nine-core/update")
 
 include(":app")

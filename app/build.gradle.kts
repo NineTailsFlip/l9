@@ -20,7 +20,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "life.furrer.l9"
+        applicationId = "io.github.ninetailsflip.l9"
         minSdk = 34
         targetSdk = 34
         versionCode = 16
@@ -85,6 +85,7 @@ android {
 
 dependencies {
     implementation(project(":core"))
+    implementation(project(":update"))
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.13")
 }

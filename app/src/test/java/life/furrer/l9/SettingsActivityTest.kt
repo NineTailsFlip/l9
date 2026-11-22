@@ -54,7 +54,7 @@ class SettingsActivityTest {
     fun `sections render in the shared order, with no Hint bar row since L9 has none`() {
         val activity = buildActivity()
         assertEquals(
-            listOf("APPS", "CALENDAR", "NOTIFICATIONS", "SPEED DIAL", "THEME", "BACKUP", "ABOUT"),
+            listOf("APPS", "CALENDAR", "NOTIFICATIONS", "SPEED DIAL", "UPDATES", "THEME", "BACKUP", "ABOUT"),
             sectionHeaders(activity),
         )
         assertFalse(rows(activity).any { it.text.contains("Hint bar") })

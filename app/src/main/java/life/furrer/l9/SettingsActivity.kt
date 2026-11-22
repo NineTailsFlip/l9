@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.provider.Settings
 import android.widget.Toast
+import io.github.ninetailsflip.update.updatesSection
 import java.io.IOException
 import life.furrer.nine.core.NineSurface
 import life.furrer.nine.core.settings.NineSettingsActivity
@@ -119,6 +120,7 @@ class SettingsActivity : NineSettingsActivity() {
                 onSelect = { startActivity(Intent(this@SettingsActivity, SpeedDialSettingsActivity::class.java)) },
             )
         }
+        updatesSection(screen, this, ::refresh)
     }
 
     override fun buildThemeExtras(scope: SectionScope) {
