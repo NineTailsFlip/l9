@@ -1,8 +1,20 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
+
+    <!-- Recents (RecentsActivity): bringing a task back and closing one. On the thor2 image L9 is
+         the recents component, and Android grants these two to that package; REORDER_TASKS is
+         the ordinary fallback for opening. -->
+    <uses-permission android:name="android.permission.REORDER_TASKS" />
+    <uses-permission
+        android:name="android.permission.START_TASKS_FROM_RECENTS"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission
+        android:name="android.permission.REMOVE_TASKS"
+        tools:ignore="ProtectedPermissions" />
 
     <queries>
         <intent>
@@ -33,6 +45,18 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!-- Started by the system for the Recents key (ro.config.thor2_recents on thor2) in a
+             task of its own, so going back from it never lands on L9's home screen by accident;
+             singleTask so a second press reaches onNewIntent and closes it. -->
+        <activity
+            android:name=".RecentsActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity="io.github.ninetailsflip.l9.recents"
+            android:excludeFromRecents="true"
+            android:stateNotNeeded="true"
+            android:theme="@style/Theme.Nine" />
 
         <activity
             android:name=".AppPickerActivity"

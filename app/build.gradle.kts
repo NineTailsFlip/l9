@@ -23,8 +23,8 @@ android {
         applicationId = "io.github.ninetailsflip.l9"
         minSdk = 34
         targetSdk = 34
-        versionCode = 16
-        versionName = "0.10.3"
+        versionCode = 18
+        versionName = "0.11.0"
     }
 
     if (hasKeystore) {

@@ -11,6 +11,14 @@ It is a home screen: the number keys launch your apps and the D-pad moves the se
   [nine-core](https://github.com/NineTailsFlip/nine-core) submodule, unchanged.
 - Our apps and the rules they follow: <https://github.com/NineTailsFlip>.
 
+## Recent apps
+
+`RecentsActivity` lists recent apps the Nine way: Up/Down pick one, OK returns to it, Left or
+the delete key closes it, `*` has Close all. On the thor2 image
+([android_vendor_thor2](https://github.com/kloploid/android_vendor_thor2)) it replaces the stock
+launcher's Recents: L9 is the system's recents component there, and the Recents key opens this
+screen. Elsewhere it isn't reachable and does nothing.
+
 ## Building
 
 You need JDK 17+ and the Android SDK (platform 34).
