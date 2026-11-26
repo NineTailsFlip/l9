@@ -82,17 +82,55 @@ object AppRepository {
         prefs(context).edit().putString(KEY_ALIGNMENT, value.name).apply()
     }
 
+    /** A new phone's home screen: the Nine apps (and the camera, which has no Nine app yet), in
+     *  this order, as far as they're installed. Seeded once, the first time the slots load - on
+     *  the phone, right after the first-time setup; never again once the slots were saved. */
+    val DEFAULT_HOME = listOf(
+        "io.github.ninetailsflip.p9" to "life.furrer.p9.dial.DialerActivity",
+        "io.github.ninetailsflip.m9" to "life.furrer.m9.conversations.ConversationListActivity",
+        "io.github.ninetailsflip.tg9" to "dev.tg9.chats.ChatListActivity",
+        "io.github.ninetailsflip.c9" to "life.furrer.c9.ContactsLauncher",
+        "io.github.ninetailsflip.c9" to "life.furrer.c9.CalendarLauncher",
+        "org.lineageos.aperture" to "org.lineageos.aperture.CameraLauncher",
+        "io.github.ninetailsflip.g9" to "dev.g9.BrowseActivity",
+        "io.github.ninetailsflip.settings" to "io.github.ninetailsflip.settings.ScreenActivity",
+    )
+
     fun loadSlots(context: Context): List<AppEntry?> {
+        val json = prefs(context).getString(KEY_SLOTS, null) ?: seedDefaults(context)
+            ?: return List(getSlotCount(context)) { null }
         val count = getSlotCount(context)
-        val json = prefs(context).getString(KEY_SLOTS, null) ?: return List(count) { null }
         val array = JSONArray(json)
         val overrides = loadOverrides(context)
         val slots = MutableList<AppEntry?>(count) { null }
         for (i in 0 until minOf(count, array.length())) {
             val obj = array.optJSONObject(i) ?: continue
-            slots[i] = AppEntry.fromJson(obj).withOverride(overrides)
+            slots[i] = withCurrentLabel(context, AppEntry.fromJson(obj)).withOverride(overrides)
         }
         return slots
+    }
+
+    /** Fills the slots with [DEFAULT_HOME]'s installed apps; their JSON, or null with none. */
+    private fun seedDefaults(context: Context): String? {
+        val entries = DEFAULT_HOME.mapNotNull { (pkg, activity) -> installed(context, pkg, activity) }
+        if (entries.isEmpty()) return null
+        if (entries.size > getSlotCount(context)) setSlotCount(context, entries.size)
+        saveSlots(context, entries)
+        return prefs(context).getString(KEY_SLOTS, null)
+    }
+
+    private fun installed(context: Context, packageName: String, activityName: String): AppEntry? {
+        val pm = context.packageManager
+        val info = runCatching { pm.getActivityInfo(ComponentName(packageName, activityName), 0) }.getOrNull()
+            ?: return null
+        return AppEntry(packageName, activityName, info.loadLabel(pm).toString())
+    }
+
+    /** The app's name as it is now: a slot keeps the name it had when chosen, and apps get
+     *  renamed in updates ("C9 Calendar" became "Calendar"). A missing app keeps the old one. */
+    private fun withCurrentLabel(context: Context, entry: AppEntry): AppEntry {
+        val current = installed(context, entry.packageName, entry.activityName)?.label ?: return entry
+        return if (current == entry.label) entry else entry.copy(label = current)
     }
 
     fun saveSlots(context: Context, slots: List<AppEntry?>) {

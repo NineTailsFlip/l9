@@ -52,6 +52,43 @@ class AppRepositoryTest {
         assertEquals(listOf(null, null, null), slots)
     }
 
+    private fun install(packageName: String, activityName: String, label: String) {
+        val activity = android.content.pm.ActivityInfo().apply {
+            this.packageName = packageName
+            name = activityName
+            nonLocalizedLabel = label
+            applicationInfo = android.content.pm.ApplicationInfo().apply { this.packageName = packageName }
+        }
+        org.robolectric.Shadows.shadowOf(context.packageManager).addOrUpdateActivity(activity)
+    }
+
+    @Test
+    fun `a new phone's home screen is the installed Nine apps, in order`() {
+        install("io.github.ninetailsflip.tg9", "dev.tg9.chats.ChatListActivity", "Telegram")
+        install("io.github.ninetailsflip.p9", "life.furrer.p9.dial.DialerActivity", "Phone")
+        install("io.github.ninetailsflip.c9", "life.furrer.c9.CalendarLauncher", "Calendar")
+        val slots = AppRepository.loadSlots(context)
+        assertEquals(listOf("Phone", "Telegram", "Calendar", null), slots.map { it?.label })
+        // Seeded once: cleared slots stay cleared.
+        AppRepository.saveSlots(context, listOf(null, null, null, null))
+        assertEquals(listOf(null, null, null, null), AppRepository.loadSlots(context))
+    }
+
+    @Test
+    fun `seeding grows the slot count to fit every default app`() {
+        AppRepository.DEFAULT_HOME.forEachIndexed { i, (pkg, activity) -> install(pkg, activity, "App $i") }
+        val slots = AppRepository.loadSlots(context)
+        assertEquals(AppRepository.DEFAULT_HOME.size, AppRepository.getSlotCount(context))
+        assertTrue(slots.all { it != null })
+    }
+
+    @Test
+    fun `a slot shows the app's current name, not the one it had when chosen`() {
+        install("io.github.ninetailsflip.c9", "life.furrer.c9.CalendarLauncher", "Calendar")
+        AppRepository.saveSlots(context, listOf(AppEntry("io.github.ninetailsflip.c9", "life.furrer.c9.CalendarLauncher", "C9 Calendar")))
+        assertEquals("Calendar", AppRepository.loadSlots(context)[0]?.label)
+    }
+
     @Test
     fun `saved slots round trip, preserving empty slots and order`() {
         val entryA = AppEntry("a.pkg", "a.Activity", "App A")
