@@ -780,11 +780,9 @@ class MainActivity : NineActivity() {
      *  all row referencing the same app. */
     private fun onRenameRequested(index: Int) {
         val entry = slots.getOrNull(index) ?: return
-        showRenameDialog(entry.displayLabel) { newLabel ->
-            AppRepository.setCustomLabel(this, entry.packageName, entry.activityName, newLabel)
-            slots = AppRepository.loadSlots(this)
-            render()
-        }
+        // onResume reloads the slots with the new name; the highlight stays on this one.
+        keepSelectionOnResume = true
+        startActivity(RenameActivity.intentFor(this, entry))
     }
 
     private fun onSelect(index: Int) {

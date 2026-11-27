@@ -65,6 +65,11 @@
             android:theme="@style/Theme.Nine" />
 
         <activity
+            android:name=".RenameActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Nine" />
+
+        <activity
             android:name=".SettingsActivity"
             android:exported="false"
             android:theme="@style/Theme.Nine" />

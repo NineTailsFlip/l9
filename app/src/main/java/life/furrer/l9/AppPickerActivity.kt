@@ -326,10 +326,12 @@ class AppPickerActivity : NineActivity() {
     }
 
     private fun onRenameRequested(entry: AppEntry) {
-        showRenameDialog(entry.displayLabel) { newLabel ->
-            AppRepository.setCustomLabel(this, entry.packageName, entry.activityName, newLabel)
-            refreshApps()
-        }
+        startActivityForResult(RenameActivity.intentFor(this, entry), REQUEST_RENAME)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_RENAME && resultCode == RESULT_OK) refreshApps()
     }
 
     private fun setHidden(entry: AppEntry, hidden: Boolean) {
@@ -356,5 +358,6 @@ class AppPickerActivity : NineActivity() {
         /** What the clear row says; the default fits a numbered slot, the Left/Right shortcuts pass their own. */
         const val EXTRA_CLEAR_LABEL = "clear_label"
         const val EXTRA_CLEAR = "clear"
+        private const val REQUEST_RENAME = 1
     }
 }

@@ -1,6 +1,5 @@
 package life.furrer.l9
 
-import android.app.AlertDialog
 import android.app.WallpaperManager
 import android.content.Intent
 import android.graphics.Bitmap
@@ -13,7 +12,6 @@ import life.furrer.nine.core.NineSurface
 import life.furrer.nine.core.settings.NineSettingsActivity
 import life.furrer.nine.core.settings.SectionScope
 import life.furrer.nine.core.settings.SettingsScreen
-import life.furrer.nine.core.ui.dialogThemeResId
 
 private const val MIN_SLOT_COUNT = 1
 private const val MAX_SLOT_COUNT = 9
@@ -172,26 +170,18 @@ class SettingsActivity : NineSettingsActivity() {
     }
 
     private fun confirmOpenNotificationSettings() {
-        AlertDialog.Builder(this, dialogThemeResId())
-            .setTitle("Notification access")
-            .setMessage(
-                "L9 shows a dot next to the battery level when you have notifications. " +
-                    "It never reads notification content. Enable \"L9\" on the next screen."
-            )
-            .setPositiveButton("Open settings") { _, _ ->
-                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        confirm(
+            "L9 shows a dot next to the battery level when you have notifications. It never reads " +
+                "notification content. Turn on \"L9\" on the next screen.",
+            yes = "Open notification access",
+        ) { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
     }
 
     private fun confirmEnableBlackWallpapers() {
-        AlertDialog.Builder(this, dialogThemeResId())
-            .setTitle("Black wallpapers")
-            .setMessage("Replace your current lock screen and home screen wallpapers with solid black?")
-            .setPositiveButton("Set") { _, _ -> setWallpapersBlack() }
-            .setNegativeButton("Cancel", null)
-            .show()
+        confirm(
+            "Replace your current lock screen and home screen wallpapers with solid black?",
+            yes = "Set black wallpapers",
+        ) { setWallpapersBlack() }
     }
 
     private fun setWallpapersBlack() {
