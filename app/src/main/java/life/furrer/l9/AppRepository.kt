@@ -31,6 +31,13 @@ object AppRepository {
     const val DEFAULT_HOME_FONT_SIZE = 30
     const val DEFAULT_BROWSE_FONT_SIZE = 28
 
+    private val PHONE = "io.github.ninetailsflip.p9" to "life.furrer.p9.dial.DialerActivity"
+    private val MESSAGES = "io.github.ninetailsflip.m9" to "life.furrer.m9.conversations.ConversationListActivity"
+    private val CONTACTS = "io.github.ninetailsflip.c9" to "life.furrer.c9.ContactsLauncher"
+    private val CALENDAR = "io.github.ninetailsflip.c9" to "life.furrer.c9.CalendarLauncher"
+    private val GALLERY = "io.github.ninetailsflip.g9" to "dev.g9.BrowseActivity"
+    private val SETTINGS = "io.github.ninetailsflip.settings" to "io.github.ninetailsflip.settings.ScreenActivity"
+
     fun getSlotCount(context: Context): Int =
         prefs(context).getInt(KEY_SLOT_COUNT, DEFAULT_SLOT_COUNT)
 
@@ -86,14 +93,26 @@ object AppRepository {
      *  this order, as far as they're installed. Seeded once, the first time the slots load - on
      *  the phone, right after the first-time setup; never again once the slots were saved. */
     val DEFAULT_HOME = listOf(
-        "io.github.ninetailsflip.p9" to "life.furrer.p9.dial.DialerActivity",
-        "io.github.ninetailsflip.m9" to "life.furrer.m9.conversations.ConversationListActivity",
+        PHONE,
+        MESSAGES,
         "io.github.ninetailsflip.tg9" to "dev.tg9.chats.ChatListActivity",
-        "io.github.ninetailsflip.c9" to "life.furrer.c9.ContactsLauncher",
-        "io.github.ninetailsflip.c9" to "life.furrer.c9.CalendarLauncher",
+        CONTACTS,
+        CALENDAR,
         "org.lineageos.aperture" to "org.lineageos.aperture.CameraLauncher",
-        "io.github.ninetailsflip.g9" to "dev.g9.BrowseActivity",
-        "io.github.ninetailsflip.settings" to "io.github.ninetailsflip.settings.ScreenActivity",
+        GALLERY,
+        SETTINGS,
+    )
+
+    /** The stock apps the thor2 image leaves out (Settings: keeps without its launcher entry), and
+     *  the Nine app in each one's place. A slot or side key chosen before the update that took one
+     *  out moves over to its Nine app; without this it'd say "Couldn't open that app". */
+    val REPLACEMENTS: Map<String, Pair<String, String>> = mapOf(
+        "com.android.dialer" to PHONE,
+        "com.android.messaging" to MESSAGES,
+        "com.android.contacts" to CONTACTS,
+        "org.lineageos.etar" to CALENDAR,
+        "org.lineageos.glimpse" to GALLERY,
+        "com.android.settings" to SETTINGS,
     )
 
     fun loadSlots(context: Context): List<AppEntry?> {
@@ -103,11 +122,27 @@ object AppRepository {
         val array = JSONArray(json)
         val overrides = loadOverrides(context)
         val slots = MutableList<AppEntry?>(count) { null }
+        var replaced = false
         for (i in 0 until minOf(count, array.length())) {
             val obj = array.optJSONObject(i) ?: continue
-            slots[i] = withCurrentLabel(context, AppEntry.fromJson(obj)).withOverride(overrides)
+            val saved = AppEntry.fromJson(obj)
+            val entry = replacement(context, saved)?.also {
+                array.put(i, it.toJson())
+                replaced = true
+            } ?: saved
+            slots[i] = withCurrentLabel(context, entry).withOverride(overrides)
         }
+        // Saved as the array it was, so slots past a shrunk slot count stay as they were.
+        if (replaced) prefs(context).edit().putString(KEY_SLOTS, array.toString()).apply()
         return slots
+    }
+
+    /** [entry]'s Nine app when [entry] is a stock app no longer there ([REPLACEMENTS]) and the
+     *  Nine app is; null otherwise. */
+    private fun replacement(context: Context, entry: AppEntry): AppEntry? {
+        val (packageName, activityName) = REPLACEMENTS[entry.packageName] ?: return null
+        if (installed(context, entry.packageName, entry.activityName) != null) return null
+        return installed(context, packageName, activityName)
     }
 
     /** Fills the slots with [DEFAULT_HOME]'s installed apps; their JSON, or null with none. */
@@ -151,7 +186,9 @@ object AppRepository {
 
     private fun loadSingleApp(context: Context, key: String): AppEntry? {
         val json = prefs(context).getString(key, null) ?: return null
-        return AppEntry.fromJson(JSONObject(json)).withOverride(loadOverrides(context))
+        val saved = AppEntry.fromJson(JSONObject(json))
+        val entry = replacement(context, saved)?.also { saveSingleApp(context, key, it) } ?: saved
+        return entry.withOverride(loadOverrides(context))
     }
 
     private fun saveSingleApp(context: Context, key: String, entry: AppEntry?) {

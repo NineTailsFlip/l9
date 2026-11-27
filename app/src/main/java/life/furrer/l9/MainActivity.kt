@@ -50,6 +50,9 @@ private const val STATE_PENDING_TARGET = "pending_target"
 private const val STATE_PENDING_SLOT = "pending_slot"
 private const val INDEX_COLUMN_WIDTH = 104
 private const val ROW_SIDE_PADDING = 28
+private const val HEADER_GAP_UNDER_STATUS_BAR = 16
+/** An empty slot: * opens the menu, its 1 is "Link app". Short, to fit a line at the home font. */
+internal const val EMPTY_SLOT_HINT = "* 1 to set"
 private const val DIVIDER_GREY = 0xFF333333.toInt()
 private const val SPEED_DIAL_WARNING_DELAY_MS = 1000L
 // Below this hold length, letting go is a normal quick tap (this digit's slot/app) rather than a
@@ -182,6 +185,11 @@ class MainActivity : NineActivity() {
         header.addView(clockView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         header.addView(notificationDot)
         header.addView(batteryView)
+        if (NineImage.hasStatusBar()) {
+            // Only the gap under the status bar is left of it.
+            header.removeAllViews()
+            header.setPadding(0, HEADER_GAP_UNDER_STATUS_BAR, 0, 0)
+        }
 
         calendarContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         calendarDivider = View(this).apply {
@@ -406,8 +414,11 @@ class MainActivity : NineActivity() {
                 textSize = 18f
                 gravity = Gravity.END
             }
+            // One line each, so every row is the same height; a name too long ends in "…".
             val labelView = TextView(this).apply {
                 textSize = fontSize
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
             }
             // Balances numberView's width on the opposite side so that centering
             // [number, label, spacer] as a block centers the label alone.
@@ -457,7 +468,7 @@ class MainActivity : NineActivity() {
             spacerViews[index].visibility = if (balanceSpacer) View.INVISIBLE else View.GONE
 
             val label = labelViews[index]
-            val baseText = entry?.displayLabel ?: "press * 1 to set"
+            val baseText = entry?.displayLabel ?: EMPTY_SLOT_HINT
             val displayText = if (selected && reorderModeActive) "↕ $baseText" else baseText
             val labelColor = if (selected) Color.WHITE else Palette.GRAY_DIM
             if (inlineIndex) {

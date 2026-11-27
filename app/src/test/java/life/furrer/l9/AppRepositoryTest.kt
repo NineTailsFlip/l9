@@ -3,6 +3,7 @@ package life.furrer.l9
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -87,6 +88,38 @@ class AppRepositoryTest {
         install("io.github.ninetailsflip.c9", "life.furrer.c9.CalendarLauncher", "Calendar")
         AppRepository.saveSlots(context, listOf(AppEntry("io.github.ninetailsflip.c9", "life.furrer.c9.CalendarLauncher", "C9 Calendar")))
         assertEquals("Calendar", AppRepository.loadSlots(context)[0]?.label)
+    }
+
+    @Test
+    fun `a slot on a stock app the image took out moves to its Nine app, and stays moved`() {
+        install("io.github.ninetailsflip.p9", "life.furrer.p9.dial.DialerActivity", "Phone")
+        val dialer = AppEntry("com.android.dialer", "com.android.dialer.main.impl.MainActivity", "Phone")
+        val other = AppEntry("a.pkg", "a.Activity", "App A")
+        AppRepository.saveSlots(context, listOf(other, dialer, null, null))
+
+        val p9 = AppEntry("io.github.ninetailsflip.p9", "life.furrer.p9.dial.DialerActivity", "Phone")
+        assertEquals(listOf(other, p9, null, null), AppRepository.loadSlots(context))
+        // Saved: a smaller slot count keeps the move, and the slot past it is untouched.
+        AppRepository.setSlotCount(context, 2)
+        assertEquals(listOf(other, p9), AppRepository.loadSlots(context))
+    }
+
+    @Test
+    fun `a stock app that's still there, or with no Nine app installed, stays`() {
+        install("com.android.contacts", "com.android.contacts.activities.PeopleActivity", "Contacts")
+        val contacts = AppEntry("com.android.contacts", "com.android.contacts.activities.PeopleActivity", "Contacts")
+        val etar = AppEntry("org.lineageos.etar", "com.android.calendar.AllInOneActivity", "Calendar")
+        AppRepository.saveSlots(context, listOf(contacts, etar, null, null))
+        assertEquals(listOf(contacts, etar, null, null), AppRepository.loadSlots(context))
+    }
+
+    @Test
+    fun `a side key on a stock app the image took out moves too`() {
+        install("io.github.ninetailsflip.m9", "life.furrer.m9.conversations.ConversationListActivity", "Messages")
+        AppRepository.setRightApp(context, AppEntry("com.android.messaging", "com.android.messaging.ui.conversationlist.ConversationListActivity", "Messaging"))
+        val m9 = AppEntry("io.github.ninetailsflip.m9", "life.furrer.m9.conversations.ConversationListActivity", "Messages")
+        assertEquals(m9, AppRepository.getRightApp(context))
+        assertEquals("io.github.ninetailsflip.m9", JSONObject(context.getSharedPreferences("l9", 0).getString("right_app", null)!!).getString("packageName"))
     }
 
     @Test
